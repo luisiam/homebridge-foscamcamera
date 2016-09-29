@@ -209,15 +209,15 @@ FoscamPlatform.prototype.getCurrentState = function(mac, callback) {
     if (config.result == 0) {
       // Stop polling
       if (thisCamera.polling) clearTimeout(thisCamera.polling);
-
+	  
       // Compute current state and target state
       if (config.isEnable == 0) {
         thisCamera.currentState = Characteristic.SecuritySystemCurrentState.DISARMED;
 
         // Set motion sensor motion detected
-        thisCamera.motionAlarm = 0;
+		thisCamera.motionAlarm = 0;
         thisAccessory.getService(Service.MotionSensor)
-          .setCharacteristic(Characteristic.StatusActive, 0);
+          .setCharacteristic(Characteristic.MotionDetected, 0);
       } else {
         if (thisCamera.conversion.indexOf(config.linkage) >= 0) {
           thisCamera.currentState = thisCamera.conversion.indexOf(config.linkage);
@@ -226,7 +226,6 @@ FoscamPlatform.prototype.getCurrentState = function(mac, callback) {
         }
 
         // Start polling
-        thisCamera.motionAlarm = 1;
         self.periodicUpdate(mac);
       }
 
@@ -289,13 +288,12 @@ FoscamPlatform.prototype.setTargetState = function(mac, state, callback) {
         config.linkage = thisCamera.conversion[state];
 
         // Start polling
-        thisCamera.motionAlarm = 1;
         self.periodicUpdate(mac);
       } else {
         // Set motion sensor motion detected
-        thisCamera.motionAlarm = 0;
+		thisCamera.motionAlarm = 0;
         thisAccessory.getService(Service.MotionSensor)
-          .setCharacteristic(Characteristic.StatusActive, 0);
+          .setCharacteristic(Characteristic.MotionDetected, 0);
       }
 
       // Update config with requested state
@@ -303,7 +301,7 @@ FoscamPlatform.prototype.setTargetState = function(mac, state, callback) {
 
       // Set motion sensor status active
       thisAccessory.getService(Service.MotionSensor)
-        .setCharacteristic(Characteristic.StatusActive, config.isEnable);
+        .setCharacteristic(Characteristic.StatusActive, enable);
 
       // Set security system current state
       thisAccessory.getService(Service.SecuritySystem)
