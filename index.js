@@ -47,7 +47,13 @@ FoscamPlatform.prototype.didFinishLaunching = function() {
 				cameraConfig.port = cameraConfig.port || 88;
 				cameraConfig.gain = cameraConfig.gain || 0;
 				cameraConfig.streamType = cameraConfig.streamType || 3;
-				self.addAccessory(cameraConfig);
+				this.getInfo(cameraConfig, function(cameraConfig, mac, error) {
+					if (!error) {
+						self.configureCamera(cameraConfig, mac);
+					} else {
+						self.log(error);
+					}
+				});
 			} else {
 				self.log("[FoscamCamera] Missing Required Information!");
 			}
@@ -55,20 +61,7 @@ FoscamPlatform.prototype.didFinishLaunching = function() {
 	}
 }
 
-// Method to add or update HomeKit accessories
-FoscamPlatform.prototype.addAccessory = function(cameraConfig) {
-	var self = this;
-
-	this.getInfo(cameraConfig, function(cameraConfig, mac, error) {
-		if (!error) {
-			self.configureCamera(cameraConfig, mac);
-		} else {
-			self.log(error);
-		}
-	});
-}
-
-// Method to detect Foscam API version and camera info
+// Method to detect Foscam camera info
 FoscamPlatform.prototype.getInfo = function(cameraConfig, callback) {
 	var self = this;
 
@@ -97,13 +90,10 @@ FoscamPlatform.prototype.getInfo = function(cameraConfig, callback) {
 		} else {
 			callback(null, null, "Failed to retrieve camera information!");
 		}
-	})
-	.catch(function(error) {
-		callback(null, null, "Failed to retrieve camera information!");
 	});
 }
 
-// Method to detect Foscam API version and camera info
+// Method to detect Foscam API version
 FoscamPlatform.prototype.detectAPI = function(cameraConfig, mac, callback) {
 	var self = this;
 
@@ -116,10 +106,6 @@ FoscamPlatform.prototype.detectAPI = function(cameraConfig, mac, callback) {
 		}
 
 		callback(cameraConfig, mac);
-	})
-	.catch(function(error) {
-		self.log(error);
-		callback(null, null, "Failed to detect API version!");
 	});
 }
 
@@ -135,10 +121,10 @@ FoscamPlatform.prototype.configureCamera = function(cameraConfig, mac) {
 
 	if (thisCamera.ver == 0) {
 		// Older models only support 4-bit linkage
-		thisCamera.conversion = conversion.map(function(k) {return (k & 0x0f)});
+		thisCamera.conversion = thisCamera.conversion.map(function(k) {return (k & 0x0f)});
 	} else {
 		// Newer models support push notification bit
-		thisCamera.conversion = conversion.map(function(k) {return (k & 0x8f)});
+		thisCamera.conversion = thisCamera.conversion.map(function(k) {return (k & 0x8f)});
 	}
 
 	// Setup for FoscamAccessory
@@ -203,7 +189,7 @@ FoscamPlatform.prototype.getInitState = function(accessory) {
 FoscamPlatform.prototype.getCurrentState = function(mac, callback) {
 	var self = this;
 	var thisCamera = this.cameraInfo[mac];
-	var name = "Foscam" + thisCamera.name;
+	var name = "Foscam " + thisCamera.name;
 
 	// Setup the correct promise to use
 	if (thisCamera.ver == 0) {
@@ -256,7 +242,7 @@ FoscamPlatform.prototype.getTargetState = function(mac, callback) {
 FoscamPlatform.prototype.setTargetState = function(mac, accessory, state, callback) {
 	var self = this;
 	var thisCamera = this.cameraInfo[mac];
-	var name = "Foscam" + thisCamera.name;
+	var name = "Foscam " + thisCamera.name;
 
 	// Setup the correct promise and function to use
 	if (thisCamera.ver == 0) {
@@ -314,7 +300,7 @@ FoscamPlatform.prototype.getStatusFault = function(mac, callback) {
 // Method to handle identify request
 FoscamPlatform.prototype.identify = function(mac, paired, callback) {
 	var thisCamera = this.cameraInfo[mac];
-	var name = "Foscam" + thisCamera.name;
+	var name = "Foscam " + thisCamera.name;
 	this.log("[" + name + "] Identify requested!");
 	callback();
 }
