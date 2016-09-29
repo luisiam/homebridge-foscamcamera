@@ -4,6 +4,9 @@ Foscam Plugin (Camera, Security System, Motion Sensor) for [HomeBridge](https://
 Older verion using API 1.0: [homebridge-foscam](https://github.com/rooi/homebridge-foscam)<br>
 Older verion using API 2.0: [homebridge-foscam2](https://github.com/luisiam/homebridge-foscam2)
 
+**Due to protocol limitation, users will need to pair with the camera in a HomeKit app separately.<br>**
+**Pairing PIN is the same as the HomeBridge pairing PIN.**
+
 # Installation
 1. Install homebridge using `npm install -g homebridge`.
 2. Install this plugin using `npm install -g git+https://github.com/luisiam/homebridge-foscamcamera.git`.
