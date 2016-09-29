@@ -1,1 +1,73 @@
-# Work In Progress
+# homebridge-foscamcamera
+Foscam Plugin (Camera, Security System, Motion Sensor) for [HomeBridge](https://github.com/nfarina/homebridge) (API 2.1)
+
+Older verion using API 1.0: [homebridge-foscam](https://github.com/rooi/homebridge-foscam)<br>
+Older verion using API 2.0: [homebridge-foscam2](https://github.com/luisiam/homebridge-foscam2)
+
+# Installation
+1. Install homebridge using `npm install -g homebridge`.
+2. Install this plugin using `npm install -g git+https://github.com/luisiam/homebridge-foscamcamera.git`.
+3. Update your configuration file. See configuration sample below.
+
+# Configuration
+Edit your `config.json` accordingly. Configuration sample:
+```
+"platforms": [{
+    "platform": "FoscamCamera",
+    "cameras": [{
+        "username": "admin",
+        "password": "password",
+        "host": "192.168.1.10",
+        "port": 88,
+        "gain": 6,
+        "stay": 13,
+        "away": 15,
+        "night": 14
+    }, {
+        "username": "admin2",
+        "password": "password2",
+        "host": "192.168.1.20",
+        "port": 98,
+        "gain": 3,
+        "stay": 0,
+        "away": 14,
+        "night": 13
+    }]
+}]
+
+```
+
+| Fields            | Description                                                   | Required |
+|-------------------|---------------------------------------------------------------|----------|
+| platform          | Must always be `FoscamCamera`.                                | Yes      |
+| cameras           | Array of camera config (multiple cameras supported).          | Yes      |
+| username          | Your camera login username (Default admin).                   | No       |
+| password          | Your camera login password.                                   | Yes      |
+| host              | Your camera IP address.                                       | Yes      |
+| port              | Your camera port (Default 88).                                | No       |
+| gain              | Gain in decibels to boost the audio (Default 0).              | No       |
+| stay*             | Configuration for Stay Arm (Default 0).                       | No       |
+| away*             | Configuration for Away Arm (Default 0).                       | No       |
+| night*            | Configuration for Night Arm (Default 0).                      | No       |
+
+*`stay`, `away`, `night` define configuration for different ARMED state.
+
+The supported configurations depend on your device. The Foscam public CGI defines the following:<br>
+bit 3 | bit 2 | bit 1 | bit 0<br>
+bit 0 = Ring<br>
+bit 1 = Send email<br>
+bit 2 = Snap picture<br>
+bit 3 = Record
+
+The following seems to be valid for the C2 as well (not found in any documentation)<br>
+bit 7 | bit 6 | bit 5 | bit 4 | bit 3 | bit 2 | bit 1 | bit 0<br>
+bit 0 = Ring<br>
+bit 1 = Send email<br>
+bit 2 = Snap picture<br>
+bit 3 = Record<br>
+bit 7 = Push notification
+
+Note: The configuration is defined as int, thus the followings are valid, e.g. 0 (Do Nothing), 1 (Ring), 2 (Email), 3 (Ring + Email), 4 (Record), 12 (Picture and Record), 13 (Ring, Picture and Record), etc.
+
+P.S.: Any ARMED state will activate motion detection by default.
+
