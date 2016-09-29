@@ -18,15 +18,14 @@ function FoscamPlatform(log, config, api) {
 	this.cameras = this.config.cameras || [];
 
 	// HomeKit Current State: 0 (STAY_ARM), 1 (AWAY_ARM), 2 (NIGHT_ARM), 3 (DISARMED), 4 (ALARM_TRIGGERED)
-	this.armState = ["Armed (Stay).", "Armed (Away).", "Armed (Night).", "Disarmed.", "Alarm Triggered."]
+	this.armState = ["Armed (Stay).", "Armed (Away).", "Armed (Night).", "Disarmed.", "Alarm Triggered."];
+	this.accessories = {};
 	this.foscamAPI = {};
 	this.cameraInfo = {};
 
 	if (api) {
 		this.api = api;
-		if (api.version < 2.1) {
-			throw new Error("Unexpected API version.");
-		}
+		if (api.version < 2.1) throw new Error("Unexpected API version.");
 		this.api.on('didFinishLaunching', this.didFinishLaunching.bind(this));
 	}
 }
@@ -105,6 +104,7 @@ FoscamPlatform.prototype.configureCamera = function(cameraConfig, mac) {
 	var uuid = UUIDGen.generate(name + mac);
 
 	thisCamera.currentState = Characteristic.SecuritySystemCurrentState.DISARMED;
+	thisCamera.motionAlarm = 0;
 	thisCamera.statusFault = 0;
 	thisCamera.conversion = [cameraConfig.stay, cameraConfig.away, cameraConfig.night];
 
@@ -126,6 +126,10 @@ FoscamPlatform.prototype.configureCamera = function(cameraConfig, mac) {
 	// Add HomeKit Security System Service
 	newAccessory.addService(Service.SecuritySystem, name + " Motion Detection");
 
+	// Add HomeKit Motion Sensor Service
+	newAccessory.addService(Service.MotionSensor, name + " Motion Sensor");
+
+
 	// Setup HomeKit accessory information
 	newAccessory
 		.getService(Service.AccessoryInformation)
@@ -145,7 +149,7 @@ FoscamPlatform.prototype.configureCamera = function(cameraConfig, mac) {
 		.getService(Service.SecuritySystem)
 		.getCharacteristic(Characteristic.SecuritySystemTargetState)
 		.on('get', this.getTargetState.bind(this, mac))
-		.on('set', this.setTargetState.bind(this, mac, newAccessory));
+		.on('set', this.setTargetState.bind(this, mac));
 
 	newAccessory
 		.getService(Service.SecuritySystem)
@@ -153,9 +157,25 @@ FoscamPlatform.prototype.configureCamera = function(cameraConfig, mac) {
 		.on('get', this.getStatusFault.bind(this, mac));
 
 	newAccessory
+		.getService(Service.MotionSensor)
+		.getCharacteristic(Characteristic.MotionDetected)
+		.on('get', this.getMotionDetected.bind(this, mac));
+
+	newAccessory
+		.getService(Service.MotionSensor)
+		.getCharacteristic(Characteristic.StatusActive)
+		.on('get', this.getStatusActive.bind(this, mac));
+
+	newAccessory
+		.getService(Service.MotionSensor)
+		.getCharacteristic(Characteristic.StatusFault)
+		.on('get', this.getStatusFault.bind(this, mac));
+
+	newAccessory
 		.on('identify', this.identify.bind(this, mac));
 
 	this.api.publishCameraAccessories("FoscamCamera", [newAccessory]);
+	this.accessories[mac] = newAccessory;
 
 	// Retrieve initial state
 	this.getInitState(newAccessory);
@@ -174,7 +194,38 @@ FoscamPlatform.prototype.getInitState = function(accessory) {
 		.getValue();
 }
 
-// Method to get the current state
+// Method to update motion sensor periodically
+FoscamPlatform.prototype.periodicUpdate = function(mac) {
+	this.cameraInfo[mac].tout = setTimeout(function() {
+		var self = this;
+		var thisCamera = this.cameraInfo[mac];
+		var name = "Foscam " + thisCamera.name;
+
+		this.foscamAPI[mac].getDevState().then(function(state) {
+			// Check for changes
+			if (thisCamera.motionAlarm != state.motionDetectAlarm) {
+				thisCamera.motionAlarm = state.motionDetectAlarm;
+
+				if (thisCamera.motionAlarm == 2) self.log("[" + name + "] Motion Detected!");
+
+				// Refresh motion detected
+				self.accessories[mac]
+					.getService(Service.MotionSensor)
+					.setCharacteristic(Characteristic.MotionDetected, thisCamera.motionAlarm > 1);
+
+				// Refresh status active
+				self.accessories[mac]
+					.getService(Service.MotionSensor)
+					.setCharacteristic(Characteristic.StatusActive, thisCamera.motionAlarm > 0);
+			}
+
+			// Setup next polling
+			if (thisCamera.motionAlarm != 0) self.periodicUpdate(mac);
+		});
+	}.bind(this, mac), 1000);
+}
+
+// Method to get the security system current state
 FoscamPlatform.prototype.getCurrentState = function(mac, callback) {
 	var self = this;
 	var thisCamera = this.cameraInfo[mac];
@@ -189,16 +240,28 @@ FoscamPlatform.prototype.getCurrentState = function(mac, callback) {
 
 	getConfig.then(function(config) {
 		if (config.result == 0) {
+			// Stop polling
+			if (thisCamera.tout) clearTimeout(thisCamera.tout);
+
 			// Compute current state and target state
 			if (config.isEnable == 0) {
 				thisCamera.currentState = Characteristic.SecuritySystemCurrentState.DISARMED;
+				thisCamera.motionAlarm = 0;
 			} else {
 				if (thisCamera.conversion.indexOf(config.linkage) >= 0) {
 					thisCamera.currentState = thisCamera.conversion.indexOf(config.linkage);
 				} else {
 					thisCamera.currentState = Characteristic.SecuritySystemCurrentState.STAY_ARM;
 				}
+
+				// Start polling
+				self.periodicUpdate(mac);
 			}
+
+			// Set motion sensor status active
+			self.accessories[mac]
+				.getService(Service.MotionSensor)
+				.setCharacteristic(Characteristic.StatusActive, config.isEnable);
 
 			// Set status fault
 			thisCamera.statusFault = 0;
@@ -219,7 +282,7 @@ FoscamPlatform.prototype.getCurrentState = function(mac, callback) {
 	});
 }
 
-// Method to get the target state
+// Method to get the security system target state
 FoscamPlatform.prototype.getTargetState = function(mac, callback) {
 	var self = this
 	setTimeout(function() {
@@ -227,8 +290,8 @@ FoscamPlatform.prototype.getTargetState = function(mac, callback) {
 	}, 500);
 }
 
-// Method to set the target state
-FoscamPlatform.prototype.setTargetState = function(mac, accessory, state, callback) {
+// Method to set the security system target state
+FoscamPlatform.prototype.setTargetState = function(mac, state, callback) {
 	var self = this;
 	var thisCamera = this.cameraInfo[mac];
 	var name = "Foscam " + thisCamera.name;
@@ -248,20 +311,35 @@ FoscamPlatform.prototype.setTargetState = function(mac, accessory, state, callba
 	// Get current config
 	getConfig.then(function(config) {
 		if (config.result == 0) {
+			// Stop polling
+			if (thisCamera.tout) clearTimeout(thisCamera.tout);
+
 			// Change isEnable and linkage to requested state
 			config.isEnable = enable;
-			if (enable) config.linkage = thisCamera.conversion[state];
+			if (enable) {
+				config.linkage = thisCamera.conversion[state];
+
+				// Start polling
+				self.periodicUpdate(mac);
+			} else {
+				thisCamera.motionAlarm = 0;
+			}
 
 			// Update config with requested state
 			setConfig(config);
 
-			// Set status fault
-			thisCamera.statusFault = 0;
+			// Set motion sensor status active
+			self.accessories[mac]
+				.getService(Service.MotionSensor)
+				.setCharacteristic(Characteristic.StatusActive, config.isEnable);
 
-			// Set current state
-			accessory
+			// Set security system current state
+			self.accessories[mac]
 				.getService(Service.SecuritySystem)
 				.setCharacteristic(Characteristic.SecuritySystemCurrentState, state);
+
+			// Set status fault
+			thisCamera.statusFault = 0;
 
 			self.log("[" + name + "] " + self.armState[state]);
 			callback(null);
@@ -283,6 +361,22 @@ FoscamPlatform.prototype.getStatusFault = function(mac, callback) {
 	var self = this;
 	setTimeout(function() {
 		callback(null, self.cameraInfo[mac].statusFault);
+	}, 500);
+}
+
+// Method to get the motion sensor motion detected
+FoscamPlatform.prototype.getMotionDetected = function(mac, callback) {
+	var self = this
+	setTimeout(function() {
+		callback(null, self.cameraInfo[mac].motionAlarm > 1);
+	}, 500);
+}
+
+// Method to get the motion sensor status active
+FoscamPlatform.prototype.getStatusActive = function(mac, callback) {
+	var self = this
+	setTimeout(function() {
+		callback(null, self.cameraInfo[mac].motionAlarm > 0);
 	}, 500);
 }
 
