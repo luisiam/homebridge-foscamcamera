@@ -41,13 +41,13 @@ FoscamPlatform.prototype.didFinishLaunching = function() {
 	var self = this;
 
 	if (this.cameras) {
-		this.cameras.forEach(function(camera) {
-			if (camera.password && camera.host) {
-				camera.username = camera.username || "admin";
-				camera.port = camera.port || 88;
-				camera.gain = camera.gain || 0;
-				camera.streamType = camera.streamType || 3;
-				self.addAccessory(camera);
+		this.cameras.forEach(function(cameraConfig) {
+			if (cameraConfig.password && cameraConfig.host) {
+				cameraConfig.username = cameraConfig.username || "admin";
+				cameraConfig.port = cameraConfig.port || 88;
+				cameraConfig.gain = cameraConfig.gain || 0;
+				cameraConfig.streamType = cameraConfig.streamType || 3;
+				self.addAccessory(cameraConfig);
 			} else {
 				self.log("[FoscamCamera] Missing Required Information!");
 			}
@@ -56,12 +56,12 @@ FoscamPlatform.prototype.didFinishLaunching = function() {
 }
 
 // Method to add or update HomeKit accessories
-FoscamPlatform.prototype.addAccessory = function(camera) {
+FoscamPlatform.prototype.addAccessory = function(cameraConfig) {
 	var self = this;
 
-	this.getInfo(camera, function(camera, mac, error) {
+	this.getInfo(cameraConfig, function(cameraConfig, mac, error) {
 		if (!error) {
-			self.configureCamera(camera, mac);
+			self.configureCamera(cameraConfig, mac);
 		} else {
 			self.log(error);
 		}
@@ -69,15 +69,15 @@ FoscamPlatform.prototype.addAccessory = function(camera) {
 }
 
 // Method to detect Foscam API version and camera info
-FoscamPlatform.prototype.getInfo = function(camera, callback) {
+FoscamPlatform.prototype.getInfo = function(cameraConfig, callback) {
 	var self = this;
 
 	// Setup for foscam-client
 	var thisFoscamAPI = new Foscam({
-		username: camera.username,
-		password: camera.password,
-		host: camera.host,
-		port: camera.port,
+		username: cameraConfig.username,
+		password: cameraConfig.password,
+		host: cameraConfig.host,
+		port: cameraConfig.port,
 		protocol: 'http',
 		rejectUnauthorizedCerts: true
 	});
@@ -93,7 +93,7 @@ FoscamPlatform.prototype.getInfo = function(camera, callback) {
 			self.cameraInfo[info.mac].fw = info.firmwareVer.toString();
 			self.cameraInfo[info.mac].hw = info.hardwareVer.toString();
 
-			self.detectAPI(camera, info.mac, callback);
+			self.detectAPI(cameraConfig, info.mac, callback);
 		} else {
 			callback(null, null, "Failed to retrieve camera information!");
 		}
@@ -104,7 +104,7 @@ FoscamPlatform.prototype.getInfo = function(camera, callback) {
 }
 
 // Method to detect Foscam API version and camera info
-FoscamPlatform.prototype.detectAPI = function(camera, mac, callback) {
+FoscamPlatform.prototype.detectAPI = function(cameraConfig, mac, callback) {
 	var self = this;
 
 	// Detect API
@@ -115,7 +115,7 @@ FoscamPlatform.prototype.detectAPI = function(camera, mac, callback) {
 			self.cameraInfo[mac].ver = 1;
 		}
 
-		callback(camera, mac);
+		callback(cameraConfig, mac);
 	})
 	.catch(function(error) {
 		self.log(error);
@@ -124,14 +124,14 @@ FoscamPlatform.prototype.detectAPI = function(camera, mac, callback) {
 }
 
 // Method to configure camera info for HomeKit
-FoscamPlatform.prototype.configureCamera = function(camera, mac) {
+FoscamPlatform.prototype.configureCamera = function(cameraConfig, mac) {
 	var thisCamera = this.cameraInfo[mac];
 	var name = "Foscam " + thisCamera.name;
 	var uuid = UUIDGen.generate(name + mac);
 
 	thisCamera.currentState = Characteristic.SecuritySystemCurrentState.DISARMED;
 	thisCamera.statusFault = 0;
-	thisCamera.conversion = [camera.stay, camera.away, camera.night];
+	thisCamera.conversion = [cameraConfig.stay, cameraConfig.away, cameraConfig.night];
 
 	if (thisCamera.ver == 0) {
 		// Older models only support 4-bit linkage
@@ -142,8 +142,7 @@ FoscamPlatform.prototype.configureCamera = function(camera, mac) {
 	}
 
 	// Setup for FoscamAccessory
-	var uri = "rstp://" + camera.username + ":" + camera.password + "@" + camera.host + ":" + camera.port + "/";
-	var cameraSource = new FoscamAccessory(hap, this.log, this.foscamAPI[mac], uri, camera.gain, camera.streamType);
+	var cameraSource = new FoscamAccessory(hap, cameraConfig, this.log);
 
 	// Setup accessory as CAMERA (17) category
 	var newAccessory = new Accessory(name, uuid, 17);
