@@ -17,6 +17,8 @@ function FoscamPlatform(log, config, api) {
 	this.config = config || {"platform": "FoscamCamera"};
 	this.cameras = this.config.cameras || [];
 
+	// HomeKit Current State: 0 (STAY_ARM), 1 (AWAY_ARM), 2 (NIGHT_ARM), 3 (DISARMED), 4 (ALARM_TRIGGERED)
+	this.armState = ["Armed (Stay).", "Armed (Away).", "Armed (Night).", "Disarmed.", "Alarm Triggered."]
 	this.foscamAPI = {};
 	this.cameraInfo = {};
 
@@ -27,9 +29,6 @@ function FoscamPlatform(log, config, api) {
 		}
 		this.api.on('didFinishLaunching', this.didFinishLaunching.bind(this));
 	}
-
-	// HomeKit Current State: 0 (STAY_ARM), 1 (AWAY_ARM), 2 (NIGHT_ARM), 3 (DISARMED), 4 (ALARM_TRIGGERED)
-	this.armState = ["Armed (Stay).", "Armed (Away).", "Armed (Night).", "Disarmed.", "Alarm Triggered."]
 }
 
 FoscamPlatform.prototype.configureAccessory = function(accessory) {
@@ -94,7 +93,7 @@ FoscamPlatform.prototype.getInfo = function(cameraConfig, callback) {
 				callback(cameraConfig, info.mac);
 			});
 		} else {
-			callback(null, null, "Failed to retrieve camera information!");
+			callback(null, null, "[FoscamCamera] Failed to retrieve camera information!");
 		}
 	});
 }
