@@ -45,9 +45,7 @@ FoscamPlatform.prototype.didFinishLaunching = function() {
 			if (cameraConfig.password && cameraConfig.host) {
 				cameraConfig.username = cameraConfig.username || "admin";
 				cameraConfig.port = cameraConfig.port || 88;
-				cameraConfig.gain = cameraConfig.gain || 0;
-				cameraConfig.streamType = cameraConfig.streamType || 3;
-				this.getInfo(cameraConfig, function(cameraConfig, mac, error) {
+				self.getInfo(cameraConfig, function(cameraConfig, mac, error) {
 					if (!error) {
 						self.configureCamera(cameraConfig, mac);
 					} else {
@@ -61,7 +59,7 @@ FoscamPlatform.prototype.didFinishLaunching = function() {
 	}
 }
 
-// Method to detect Foscam camera info
+// Method to detect Foscam camera info and API version
 FoscamPlatform.prototype.getInfo = function(cameraConfig, callback) {
 	var self = this;
 
@@ -86,26 +84,18 @@ FoscamPlatform.prototype.getInfo = function(cameraConfig, callback) {
 			self.cameraInfo[info.mac].fw = info.firmwareVer.toString();
 			self.cameraInfo[info.mac].hw = info.hardwareVer.toString();
 
-			self.detectAPI(cameraConfig, info.mac, callback);
+			// Detect API
+			thisFoscamAPI.getMotionDetectConfig().then(function(config) {
+				if (config.result == 0) {
+					self.cameraInfo[info.mac].ver = 0;
+				} else {
+					self.cameraInfo[info.mac].ver = 1;
+				}
+				callback(cameraConfig, info.mac);
+			});
 		} else {
 			callback(null, null, "Failed to retrieve camera information!");
 		}
-	});
-}
-
-// Method to detect Foscam API version
-FoscamPlatform.prototype.detectAPI = function(cameraConfig, mac, callback) {
-	var self = this;
-
-	// Detect API
-	this.foscamAPI[mac].getMotionDetectConfig().then(function(config) {
-		if (config.result == 0) {
-			self.cameraInfo[mac].ver = 0;
-		} else {
-			self.cameraInfo[mac].ver = 1;
-		}
-
-		callback(cameraConfig, mac);
 	});
 }
 
