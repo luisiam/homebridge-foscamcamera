@@ -209,13 +209,13 @@ FoscamPlatform.prototype.getCurrentState = function(mac, callback) {
     if (config.result == 0) {
       // Stop polling
       if (thisCamera.polling) clearTimeout(thisCamera.polling);
-	  
+
       // Compute current state and target state
       if (config.isEnable == 0) {
         thisCamera.currentState = Characteristic.SecuritySystemCurrentState.DISARMED;
 
         // Set motion sensor motion detected
-		thisCamera.motionAlarm = 0;
+        thisCamera.motionAlarm = 0;
         thisAccessory.getService(Service.MotionSensor)
           .setCharacteristic(Characteristic.MotionDetected, 0);
       } else {
@@ -291,7 +291,7 @@ FoscamPlatform.prototype.setTargetState = function(mac, state, callback) {
         self.periodicUpdate(mac);
       } else {
         // Set motion sensor motion detected
-		thisCamera.motionAlarm = 0;
+        thisCamera.motionAlarm = 0;
         thisAccessory.getService(Service.MotionSensor)
           .setCharacteristic(Characteristic.MotionDetected, 0);
       }
