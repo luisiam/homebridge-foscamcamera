@@ -45,10 +45,18 @@ FoscamPlatform.prototype.didFinishLaunching = function() {
         // Initialize default config
         cameraConfig.username = cameraConfig.username || "admin";
         cameraConfig.port = cameraConfig.port || 88;
-        cameraConfig.gain = cameraConfig.gain || 0;
         cameraConfig.stay = cameraConfig.stay || 0;
         cameraConfig.away = cameraConfig.away || 0;
         cameraConfig.night = cameraConfig.night || 0;
+        cameraConfig.speaker = {
+          "enabled": cameraConfig.spkrEnable == undefined ? true : cameraConfig.spkrEnable,
+          "compression": cameraConfig.spkrCompression == undefined ? true : cameraConfig.spkrCompression,
+          "gain": cameraConfig.spkrGain || 0
+        };
+        delete cameraConfig.spkrEnable;
+        delete cameraConfig.spkrCompression;
+        delete cameraConfig.sprkGain;
+        delete cameraConfig.motionDetector;
 
         self.getInfo(cameraConfig, function(cameraConfig, mac, error) {
           if (!error) {
@@ -81,13 +89,13 @@ FoscamPlatform.prototype.getInfo = function(cameraConfig, callback) {
   // Retrieve camera info
   thisFoscamAPI.getDevInfo().then(function(info) {
     if (info.result == 0) {
-      var thisCamera = {};
-
-      thisCamera.name = info.devName;
-      thisCamera.model = info.productName.toString();
-      thisCamera.serial = info.serialNo.toString();
-      thisCamera.fw = info.firmwareVer.toString();
-      thisCamera.hw = info.hardwareVer.toString();
+      var thisCamera = {
+        "name": info.devName,
+        "model": info.productName.toString(),
+        "serial": info.serialNo.toString(),
+        "fw": info.firmwareVer.toString(),
+        "hw": info.hardwareVer.toString()
+      };
 
       // Detect API
       thisFoscamAPI.getMotionDetectConfig().then(function(config) {

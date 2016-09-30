@@ -22,7 +22,6 @@ Edit your `config.json` accordingly. Configuration sample:
         "password": "password",
         "host": "192.168.1.10",
         "port": 88,
-        "gain": 6,
         "stay": 13,
         "away": 15,
         "night": 14
@@ -31,27 +30,35 @@ Edit your `config.json` accordingly. Configuration sample:
         "password": "password2",
         "host": "192.168.1.20",
         "port": 98,
-        "gain": 3,
         "stay": 0,
         "away": 14,
-        "night": 13
+        "night": 13,
+        "gain": 6,
+        "spkrEnable": true,
+        "spkrCompression": true,
+        "spkrGain": 1
     }]
 }]
 
 ```
 
-| Fields            | Description                                                   | Required |
-|-------------------|---------------------------------------------------------------|----------|
-| platform          | Must always be `FoscamCamera`.                                | Yes      |
-| cameras           | Array of camera config (multiple cameras supported).          | Yes      |
-| username          | Your camera login username (Default admin).                   | No       |
-| password          | Your camera login password.                                   | Yes      |
-| host              | Your camera IP address.                                       | Yes      |
-| port              | Your camera port (Default 88).                                | No       |
-| gain              | Gain in decibels to boost the audio (Default 0).              | No       |
-| stay*             | Configuration for Stay Arm (Default 0).                       | No       |
-| away*             | Configuration for Away Arm (Default 0).                       | No       |
-| night*            | Configuration for Night Arm (Default 0).                      | No       |
+| Fields          | Description                                                   | Required |
+|-----------------|---------------------------------------------------------------|----------|
+| platform        | Must always be `FoscamCamera`.                                | Yes      |
+| cameras         | Array of camera config (multiple cameras supported).          | Yes      |
+| username        | Your camera login username (Default admin).                   | No       |
+| password        | Your camera login password.                                   | Yes      |
+| host            | Your camera IP address.                                       | Yes      |
+| port            | Your camera port (Default 88).                                | No       |
+| stay*           | Configuration for Stay Arm (Default 0).                       | No       |
+| away*           | Configuration for Away Arm (Default 0).                       | No       |
+| night*          | Configuration for Night Arm (Default 0).                      | No       |
+| gain            | Gain in decibels to boost camera audio (Default 0).           | No       |
+| spkrEnable      | Enable camera speaker (Default true).                         | No       |
+| spkrCompression | Enable audio compression (Default true).                      | No       |
+| spkrGain        | Gain in decibels to boost speaker volume (Default 0).         | No       |
+
+
 
 *`stay`, `away`, `night` define configuration for different ARMED state.
 

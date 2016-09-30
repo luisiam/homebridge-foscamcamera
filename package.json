@@ -1,7 +1,7 @@
 {
   "name": "homebridge-foscamcamera",
   "description": "Foscam Plugin for HomeBridge (API 2.1): https://github.com/nfarina/homebridge",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "repository": {
     "type": "git",
     "url": "https://github.com/luisiam/homebridge-foscamcamera.git"
@@ -16,11 +16,7 @@
     "homebridge": ">=0.4.3"
   },
   "dependencies": {
-    "foscam-client": ">=0.3.0",
-    "ip": ">=1.1.3",
-    "node-opus": ">=0.2.1",
-    "rtsp-stream": ">=1.0.0",
-    "sdp-transform": ">=1.6.2",
-    "homebridge-foscam-stream": ">=0.1.3"
+    "foscam-client": "^0.3.0",
+    "homebridge-foscam-stream": "^0.3.0"
   }
 }
