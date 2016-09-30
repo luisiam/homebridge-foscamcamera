@@ -42,25 +42,23 @@ Edit your `config.json` accordingly. Configuration sample:
 
 ```
 
-| Fields          | Description                                                   | Required |
-|-----------------|---------------------------------------------------------------|----------|
-| platform        | Must always be `FoscamCamera`.                                | Yes      |
-| cameras         | Array of camera config (multiple cameras supported).          | Yes      |
-| username        | Your camera login username (Default admin).                   | No       |
-| password        | Your camera login password.                                   | Yes      |
-| host            | Your camera IP address.                                       | Yes      |
-| port            | Your camera port (Default 88).                                | No       |
-| stay*           | Configuration for Stay Arm (Default 0).                       | No       |
-| away*           | Configuration for Away Arm (Default 0).                       | No       |
-| night*          | Configuration for Night Arm (Default 0).                      | No       |
-| gain            | Gain in decibels to boost camera audio (Default 0).           | No       |
-| spkrEnable      | Enable camera speaker (Default true).                         | No       |
-| spkrCompression | Enable audio compression (Default true).                      | No       |
-| spkrGain        | Gain in decibels to boost speaker volume (Default 0).         | No       |
+| Fields          | Description                                          | Default | Required |
+|-----------------|------------------------------------------------------|---------|----------|
+| platform        | Must always be `FoscamCamera`.                       |         | Yes      |
+| cameras         | Array of camera config (multiple cameras supported). |         | Yes      |
+| username        | Your camera login username.                          | admin   | No       |
+| password        | Your camera login password.                          |         | Yes      |
+| host            | Your camera IP address.                              |         | Yes      |
+| port            | Your camera port.                                    | 88      | No       |
+| stay\*          | Configuration for Stay Arm.                          | 0       | No       |
+| away\*          | Configuration for Away Arm.                          | 0       | No       |
+| night\*         | Configuration for Night Arm.                         | 0       | No       |
+| gain            | Gain in decibels to boost camera audio.              | 0       | No       |
+| spkrEnable      | Enable camera speaker.                               | true    | No       |
+| spkrCompression | Enable audio compression.                            | true    | No       |
+| spkrGain        | Gain in decibels to boost speaker volume.            | 0       | No       |
 
-
-
-*`stay`, `away`, `night` define configuration for different ARMED state.
+\*`stay`, `away`, `night` define configuration for different ARMED state.
 
 The supported configurations depend on your device. The Foscam public CGI defines the following:<br>
 bit 3 | bit 2 | bit 1 | bit 0<br>
