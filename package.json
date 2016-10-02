@@ -17,7 +17,7 @@
   },
   "dependencies": {
     "foscam-client": "^0.3.0",
-		"foscam-binary-client": "^0.2.1",
+    "foscam-binary-client": "^0.2.1",
     "homebridge-foscam-stream": "^0.3.4",
     "chalk": "^1.1.3"
   }
