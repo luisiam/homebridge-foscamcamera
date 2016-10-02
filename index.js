@@ -135,10 +135,10 @@ FoscamPlatform.prototype.configureCamera = function(cameraConfig, mac) {
   var uuid = UUIDGen.generate(mac);
 
   // Initialize global cache
-	thisCamera.username = cameraConfig.username;
-	thisCamera.password = cameraConfig.password;
-	thisCamera.host = cameraConfig.host;
-	thisCamera.port = cameraConfig.port;
+  thisCamera.username = cameraConfig.username;
+  thisCamera.password = cameraConfig.password;
+  thisCamera.host = cameraConfig.host;
+  thisCamera.port = cameraConfig.port;
   thisCamera.currentState = Characteristic.SecuritySystemCurrentState.DISARMED;
   thisCamera.motionAlarm = 0;
   thisCamera.statusActive = 0;
@@ -199,7 +199,7 @@ FoscamPlatform.prototype.configureCamera = function(cameraConfig, mac) {
 
   newAccessory.on('identify', this.identify.bind(this, mac));
 
-	// Publish accessories to HomeKit
+  // Publish accessories to HomeKit
   this.api.publishCameraAccessories("FoscamCamera", [newAccessory]);
   this.accessories[mac] = newAccessory;
 
@@ -207,7 +207,7 @@ FoscamPlatform.prototype.configureCamera = function(cameraConfig, mac) {
   this.getInitState(newAccessory);
 
   // Start listening to motion notification
-	this.startMotionPolling(mac);
+  this.startMotionPolling(mac);
 }
 
 // Method to retrieve initial state
@@ -354,14 +354,14 @@ FoscamPlatform.prototype.startMotionPolling = function(mac, error) {
   var thisFoscamBinary = this.foscamBinary[mac];
   if (error) thisCamera.log("Motion sensing connection error: " + error);
 
-	if (thisFoscamBinary) {
-		thisCamera.log("Resetting connection to server...");
-		thisFoscamBinary.close();
-		thisFoscamBinary = null;
-	}
+  if (thisFoscamBinary) {
+    thisCamera.log("Resetting connection to server...");
+    thisFoscamBinary.close();
+    thisFoscamBinary = null;
+  }
 
   // Connect to server for motion notification
-	thisFoscamBinary = new FoscamStreamLayer(thisCamera.host, thisCamera.port, thisCamera.username, thisCamera.password);
+  thisFoscamBinary = new FoscamStreamLayer(thisCamera.host, thisCamera.port, thisCamera.username, thisCamera.password);
   thisFoscamBinary.on('motion', this.motionDetected.bind(this, mac));
   thisFoscamBinary.on('error', this.startMotionPolling.bind(this, mac));
   thisFoscamBinary.connect();
