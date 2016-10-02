@@ -159,7 +159,7 @@ FoscamPlatform.prototype.configureCamera = function(cameraConfig, mac) {
 
   // Setup HomeKit accessory information
   newAccessory.getService(Service.AccessoryInformation)
-    .setCharacteristic(Characteristic.Manufacturer, "Foscam Digital Technology LLC")
+    .setCharacteristic(Characteristic.Manufacturer, "Foscam Digital Technologies LLC")
     .setCharacteristic(Characteristic.Model, thisCamera.model)
     .setCharacteristic(Characteristic.SerialNumber, thisCamera.serial)
     .setCharacteristic(Characteristic.FirmwareRevision, thisCamera.fw)
