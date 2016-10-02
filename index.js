@@ -366,6 +366,9 @@ FoscamPlatform.prototype.startMotionPolling = function(mac, error) {
   thisFoscamBinary.on('error', this.startMotionPolling.bind(this, mac));
   thisFoscamBinary.connect();
   thisCamera.log("Connected to server for motion notification.");
+
+  // Save to global
+  this.foscamBinary[mac] = thisFoscamBinary;
 }
 
 // Method to configure motion sensor when motion is detected
