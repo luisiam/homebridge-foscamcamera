@@ -17,7 +17,7 @@ module.exports = function(homebridge) {
 
 function FoscamPlatform(log, config, api) {
   this.log = log;
-  this.platformLog = function(msg) {log(chalk.cyan("[FoscamCamera]") + " " + msg);};
+  this.platformLog = function(msg) {log(chalk.cyan("[FoscamCamera]"), msg);};
   this.config = config || {"platform": "FoscamCamera"};
   this.cameras = this.config.cameras || [];
 
@@ -104,7 +104,7 @@ FoscamPlatform.prototype.getInfo = function(cameraConfig, callback) {
         "hw": info.hardwareVer.toString(),
         "log": function() {
           var msg = util.format.apply(util, Array.prototype.slice.call(arguments));
-          self.log(chalk.cyan("[Foscam " + info.devName + "]") + " " + msg);
+          self.log(chalk.cyan("[Foscam " + info.devName + "]"), msg);
         }
       };
 

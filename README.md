@@ -7,6 +7,10 @@ Older verion using API 2.0: [homebridge-foscam2](https://github.com/luisiam/home
 **Due to protocol limitation, users will need to pair with the camera in a HomeKit app separately.<br>**
 **Pairing PIN is the same as the HomeBridge pairing PIN.**
 
+# Prerequisites
+1. Node.js **v6.6.0** or above
+2. HomeBridge **v0.4.6** or above
+
 # Installation
 1. Install homebridge using `npm install -g homebridge`.
 2. Install this plugin using `npm install -g homebridge-foscamcamera`.
@@ -78,4 +82,3 @@ bit 7 = Push notification
 Note: The configuration is defined as int, thus the followings are valid, e.g. 0 (Do Nothing), 1 (Ring), 2 (Email), 3 (Ring + Email), 4 (Record), 12 (Picture and Record), 13 (Ring, Picture and Record), etc.
 
 P.S.: Any ARMED state will activate motion detection by default.
-
