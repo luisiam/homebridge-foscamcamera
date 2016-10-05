@@ -108,6 +108,14 @@ FoscamPlatform.prototype.getInfo = function(cameraConfig, callback) {
         }
       };
 
+      // Workaround for Infinity MAC address
+      var mac;
+      if (info.mac == Infinity) {
+        mac = UUIDGen.generate(info.devName).slice(-12).toUpperCase();
+      } else {
+        mac = info.mac;
+      }
+
       // Detect API
       thisFoscamAPI.getMotionDetectConfig().then(function(config) {
         if (config.result == 0) {
@@ -117,10 +125,10 @@ FoscamPlatform.prototype.getInfo = function(cameraConfig, callback) {
         }
 
         // Store camera information
-        self.cameraInfo[info.mac] = thisCamera;
-        self.foscamAPI[info.mac] = thisFoscamAPI;
-        self.foscamBinary[info.mac] = null;
-        callback(cameraConfig, info.mac);
+        self.cameraInfo[mac] = thisCamera;
+        self.foscamAPI[mac] = thisFoscamAPI;
+        self.foscamBinary[mac] = null;
+        callback(cameraConfig, mac);
       });
     } else {
       callback(null, null, "Failed to retrieve camera information!");
@@ -352,7 +360,7 @@ FoscamPlatform.prototype.identify = function(mac, paired, callback) {
 FoscamPlatform.prototype.startMotionPolling = function(mac, error) {
   var thisCamera = this.cameraInfo[mac];
   var thisFoscamBinary = this.foscamBinary[mac];
-  if (error) thisCamera.log("Motion sensing connection error: " + error);
+  if (error) thisCamera.log(error);
 
   if (thisFoscamBinary) {
     thisCamera.log("Resetting connection to server...");

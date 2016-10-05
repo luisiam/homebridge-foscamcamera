@@ -2,7 +2,7 @@
 Foscam Plugin (Camera, Security System, Motion Sensor) for [HomeBridge](https://github.com/nfarina/homebridge) (API 2.1)
 
 Older verion using API 1.0: [homebridge-foscam](https://github.com/rooi/homebridge-foscam)<br>
-Older verion using API 2.0: [homebridge-foscam2](https://github.com/luisiam/homebridge-foscam2)
+Older verion using API 2.0: [homebridge-foscam2](https://github.com/luisiam/homebridge-foscam2) (deprecated)
 
 **Due to protocol limitation, users will need to pair with the camera in a HomeKit app separately.<br>**
 **Pairing PIN is the same as the HomeBridge pairing PIN.**
