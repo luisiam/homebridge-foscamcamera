@@ -94,7 +94,10 @@ FoscamPlatform.prototype.getInfo = function(cameraConfig, callback) {
   });
 
   // Retrieve camera info
-  thisFoscamAPI.getDevInfo().then(function(info) {
+  Promise.all([thisFoscamAPI.getDevInfo(), thisFoscamAPI.getMotionDetectConfig()]).then(function(output) {
+    var info = output[0];
+    var config = output[1];
+
     if (info.result == 0) {
       var thisCamera = {
         "name": info.devName.toString(),
@@ -120,19 +123,13 @@ FoscamPlatform.prototype.getInfo = function(cameraConfig, callback) {
       }
 
       // Detect API
-      thisFoscamAPI.getMotionDetectConfig().then(function(config) {
-        if (config.result == 0) {
-          thisCamera.ver = 0;
-        } else {
-          thisCamera.ver = 1;
-        }
+      thisCamera.ver = config.result == 0 ? 0 : 1;
 
-        // Store camera information
-        self.cameraInfo[mac] = thisCamera;
-        self.foscamAPI[mac] = thisFoscamAPI;
-        self.foscamBinary[mac] = null;
-        callback(cameraConfig, mac);
-      });
+      // Store camera information
+      self.cameraInfo[mac] = thisCamera;
+      self.foscamAPI[mac] = thisFoscamAPI;
+      self.foscamBinary[mac] = null;
+      callback(cameraConfig, mac);
     } else {
       callback(null, null, "Failed to retrieve camera information!");
     }
