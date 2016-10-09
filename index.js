@@ -141,6 +141,7 @@ FoscamPlatform.prototype.getInfo = function(cameraConfig, callback) {
 
 // Method to configure camera info for HomeKit
 FoscamPlatform.prototype.configureCamera = function(cameraConfig, mac) {
+  var self = this;
   var thisCamera = this.cameraInfo[mac];
   var name = "Foscam " + thisCamera.name;
   var uuid = UUIDGen.generate(mac);
@@ -166,59 +167,60 @@ FoscamPlatform.prototype.configureCamera = function(cameraConfig, mac) {
 
   // Setup for FoscamAccessory
   var cameraSource = new FoscamAccessory(hap, cameraConfig, thisCamera.log);
+  cameraSource.info().then(function() {
+    // Setup accessory as CAMERA (17) category
+    var newAccessory = new Accessory(name, uuid, 17);
+    newAccessory.configureCameraSource(cameraSource);
 
-  // Setup accessory as CAMERA (17) category
-  var newAccessory = new Accessory(name, uuid, 17);
-  newAccessory.configureCameraSource(cameraSource);
+    // Add HomeKit Security System Service
+    newAccessory.addService(Service.SecuritySystem, name + " Motion Detection");
 
-  // Add HomeKit Security System Service
-  newAccessory.addService(Service.SecuritySystem, name + " Motion Detection");
+    // Add HomeKit Motion Sensor Service
+    newAccessory.addService(Service.MotionSensor, name + " Motion Sensor");
 
-  // Add HomeKit Motion Sensor Service
-  newAccessory.addService(Service.MotionSensor, name + " Motion Sensor");
+    // Setup HomeKit accessory information
+    newAccessory.getService(Service.AccessoryInformation)
+      .setCharacteristic(Characteristic.Manufacturer, "Foscam Digital Technologies LLC")
+      .setCharacteristic(Characteristic.Model, thisCamera.model)
+      .setCharacteristic(Characteristic.SerialNumber, thisCamera.serial)
+      .setCharacteristic(Characteristic.FirmwareRevision, thisCamera.fw)
+      .setCharacteristic(Characteristic.HardwareRevision, thisCamera.hw);
 
-  // Setup HomeKit accessory information
-  newAccessory.getService(Service.AccessoryInformation)
-    .setCharacteristic(Characteristic.Manufacturer, "Foscam Digital Technologies LLC")
-    .setCharacteristic(Characteristic.Model, thisCamera.model)
-    .setCharacteristic(Characteristic.SerialNumber, thisCamera.serial)
-    .setCharacteristic(Characteristic.FirmwareRevision, thisCamera.fw)
-    .setCharacteristic(Characteristic.HardwareRevision, thisCamera.hw);
+    // Setup listeners for different events
+    newAccessory.getService(Service.SecuritySystem)
+      .getCharacteristic(Characteristic.SecuritySystemCurrentState)
+      .on('get', self.getCurrentState.bind(self, mac));
 
-  // Setup listeners for different events
-  newAccessory.getService(Service.SecuritySystem)
-    .getCharacteristic(Characteristic.SecuritySystemCurrentState)
-    .on('get', this.getCurrentState.bind(this, mac));
+    newAccessory.getService(Service.SecuritySystem)
+      .getCharacteristic(Characteristic.SecuritySystemTargetState)
+      .on('get', self.getTargetState.bind(self, mac))
+      .on('set', self.setTargetState.bind(self, mac));
 
-  newAccessory.getService(Service.SecuritySystem)
-    .getCharacteristic(Characteristic.SecuritySystemTargetState)
-    .on('get', this.getTargetState.bind(this, mac))
-    .on('set', this.setTargetState.bind(this, mac));
+    newAccessory.getService(Service.SecuritySystem)
+      .getCharacteristic(Characteristic.StatusFault);
 
-  newAccessory.getService(Service.SecuritySystem)
-    .getCharacteristic(Characteristic.StatusFault);
+    newAccessory.getService(Service.MotionSensor)
+      .getCharacteristic(Characteristic.MotionDetected)
+      .on('get', self.getMotionDetected.bind(self, mac));
 
-  newAccessory.getService(Service.MotionSensor)
-    .getCharacteristic(Characteristic.MotionDetected)
-    .on('get', this.getMotionDetected.bind(this, mac));
+    newAccessory.getService(Service.MotionSensor)
+      .getCharacteristic(Characteristic.StatusActive);
 
-  newAccessory.getService(Service.MotionSensor)
-    .getCharacteristic(Characteristic.StatusActive);
+    newAccessory.getService(Service.MotionSensor)
+      .getCharacteristic(Characteristic.StatusFault);
 
-  newAccessory.getService(Service.MotionSensor)
-    .getCharacteristic(Characteristic.StatusFault);
+    newAccessory.on('identify', self.identify.bind(self, mac));
 
-  newAccessory.on('identify', this.identify.bind(this, mac));
+    // Publish accessories to HomeKit
+    self.api.publishCameraAccessories("FoscamCamera", [newAccessory]);
+    self.accessories[mac] = newAccessory;
 
-  // Publish accessories to HomeKit
-  this.api.publishCameraAccessories("FoscamCamera", [newAccessory]);
-  this.accessories[mac] = newAccessory;
+    // Retrieve initial state
+    self.getInitState(newAccessory);
 
-  // Retrieve initial state
-  this.getInitState(newAccessory);
-
-  // Start listening to motion notification
-  this.startMotionPolling(mac);
+    // Start listening to motion notification
+    self.startMotionPolling(mac);
+  });
 }
 
 // Method to retrieve initial state
