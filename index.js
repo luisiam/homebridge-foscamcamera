@@ -5,7 +5,7 @@ var chalk = require("chalk");
 var util = require("util");
 var Accessory, Service, Characteristic, UUIDGen, hap;
 
-module.exports = function(homebridge) {
+module.exports = function (homebridge) {
   Accessory = homebridge.platformAccessory;
   Service = homebridge.hap.Service;
   Characteristic = homebridge.hap.Characteristic;
@@ -17,7 +17,7 @@ module.exports = function(homebridge) {
 
 function FoscamPlatform(log, config, api) {
   this.log = log;
-  this.platformLog = function(msg) {log(chalk.cyan("[FoscamCamera]"), msg);};
+  this.platformLog = function (msg) {log(chalk.cyan("[FoscamCamera]"), msg);};
   this.config = config || {"platform": "FoscamCamera"};
   this.cameras = this.config.cameras || [];
 
@@ -26,7 +26,6 @@ function FoscamPlatform(log, config, api) {
 
   // Global cache
   this.accessories = {};
-  this.foscamAPI = {};
   this.foscamBinary = {};
   this.cameraInfo = {};
 
@@ -37,37 +36,20 @@ function FoscamPlatform(log, config, api) {
   }
 }
 
-FoscamPlatform.prototype.configureAccessory = function(accessory) {
+FoscamPlatform.prototype.configureAccessory = function (accessory) {
   // Won't be invoked
 }
 
 // Method to setup accessories from config.json
-FoscamPlatform.prototype.didFinishLaunching = function() {
+FoscamPlatform.prototype.didFinishLaunching = function () {
   var self = this;
 
   if (this.cameras) {
-    this.cameras.forEach(function(cameraConfig) {
+    this.cameras.forEach(function (cameraConfig) {
       if (cameraConfig.password && cameraConfig.host) {
-
-        // Initialize default config
-        cameraConfig.username = cameraConfig.username || "admin";
-        cameraConfig.port = cameraConfig.port || 88;
-        cameraConfig.stay = cameraConfig.stay || 0;
-        cameraConfig.away = cameraConfig.away || 0;
-        cameraConfig.night = cameraConfig.night || 0;
-        cameraConfig.speaker = {
-          "enabled": cameraConfig.spkrEnable == undefined ? true : cameraConfig.spkrEnable,
-          "compression": cameraConfig.spkrCompression == undefined ? true : cameraConfig.spkrCompression,
-          "gain": cameraConfig.spkrGain || 0
-        };
-        delete cameraConfig.spkrEnable;
-        delete cameraConfig.spkrCompression;
-        delete cameraConfig.sprkGain;
-        delete cameraConfig.motionDetector;
-
-        self.getInfo(cameraConfig, function(cameraConfig, mac, error) {
+        self.getInfo(cameraConfig, function (mac, error) {
           if (!error) {
-            self.configureCamera(cameraConfig, mac);
+            self.configureCamera(mac);
           } else {
             self.platformLog(error);
           }
@@ -80,7 +62,7 @@ FoscamPlatform.prototype.didFinishLaunching = function() {
 }
 
 // Method to detect Foscam camera info and API version
-FoscamPlatform.prototype.getInfo = function(cameraConfig, callback) {
+FoscamPlatform.prototype.getInfo = function (cameraConfig, callback) {
   var self = this;
 
   // Setup for foscam-client
@@ -94,77 +76,95 @@ FoscamPlatform.prototype.getInfo = function(cameraConfig, callback) {
   });
 
   // Retrieve camera info
-  Promise.all([thisFoscamAPI.getDevInfo(), thisFoscamAPI.getMotionDetectConfig()]).then(function(output) {
+  Promise.all([thisFoscamAPI.getDevInfo(), thisFoscamAPI.getMotionDetectConfig()]).then(function (output) {
     var info = output[0];
     var config = output[1];
 
-    if (info.result == 0) {
-      var thisCamera = {
-        "name": info.devName.toString(),
-        "model": info.productName.toString(),
-        "serial": info.serialNo.toString(),
-        "fw": info.firmwareVer.toString(),
-        "hw": info.hardwareVer.toString(),
-        "log": function() {
-          var msg = util.format.apply(util, Array.prototype.slice.call(arguments));
-          self.log(chalk.cyan("[Foscam " + info.devName + "]"), msg);
-        }
+    if (info.result === 0) {
+      var thisCamera = cameraConfig;
+
+      // Initialize default config
+      thisCamera.username = cameraConfig.username || "admin";
+      thisCamera.port = cameraConfig.port || 88;
+      thisCamera.conversion = [cameraConfig.stay || 0, cameraConfig.away || 0, cameraConfig.night || 0];
+      thisCamera.speaker = {
+        "enabled": cameraConfig.spkrEnable === undefined ? true : cameraConfig.spkrEnable,
+        "compression": cameraConfig.spkrCompression === undefined ? true : cameraConfig.spkrCompression,
+        "gain": cameraConfig.spkrGain || 0
       };
+      thisCamera.log = function () {
+        var msg = util.format.apply(util, Array.prototype.slice.call(arguments));
+        self.log(chalk.cyan("[Foscam " + info.devName + "]"), msg);
+      };
+      delete thisCamera.stay;
+      delete thisCamera.away;
+      delete thisCamera.night;
+      delete thisCamera.spkrEnable;
+      delete thisCamera.spkrCompression;
+      delete thisCamera.spkrGain;
+      delete thisCamera.motionDetector;
+
+      // Storing camera info
+      thisCamera.name = info.devName.toString();
+      thisCamera.model = info.productName.toString();
+      thisCamera.serial = info.serialNo.toString();
+      thisCamera.fw = info.firmwareVer.toString();
+      thisCamera.hw = info.hardwareVer.toString();
+
+      // Initialize global cache
+      thisCamera.currentState = Characteristic.SecuritySystemCurrentState.DISARMED;
+      thisCamera.motionAlarm = false;
+      thisCamera.statusActive = false;
+      thisCamera.triggerInterval = 5;
+
+      // Detect API
+      if (config.result === 0) {
+        // Older models only support 4-bit linkage
+        thisCamera.conversion = thisCamera.conversion.map(function (k) {return (k & 0x0f)});
+
+        // Promises for older models
+        thisCamera.getConfig = thisFoscamAPI.getMotionDetectConfig();
+        thisCamera.setConfig = function (config) {thisFoscamAPI.setMotionDetectConfig(config);};
+      } else {
+        // Newer models support push notification bit
+        thisCamera.conversion = thisCamera.conversion.map(function (k) {return (k & 0x8f)});
+
+        // Promises for newer models
+        thisCamera.getConfig = thisFoscamAPI.getMotionDetectConfig1();
+        thisCamera.setConfig = function (config) {thisFoscamAPI.setMotionDetectConfig1(config);};
+      }
 
       // Workaround for empty serial number
-      if (thisCamera.serial == "") thisCamera.serial = "Default-SerialNumber";
+      if (thisCamera.serial === "") thisCamera.serial = "Default-SerialNumber";
 
       // Workaround for Infinity MAC address
       var mac;
-      if (info.mac == Infinity) {
+      if (info.mac === Infinity) {
         mac = UUIDGen.generate(info.devName).slice(-12).toUpperCase();
       } else {
         mac = info.mac;
       }
 
-      // Detect API
-      thisCamera.ver = config.result == 0 ? 0 : 1;
-
       // Store camera information
       self.cameraInfo[mac] = thisCamera;
-      self.foscamAPI[mac] = thisFoscamAPI;
       self.foscamBinary[mac] = null;
-      callback(cameraConfig, mac);
+      callback(mac);
     } else {
-      callback(null, null, "Failed to retrieve camera information!");
+      callback(null, "Failed to retrieve camera information!");
     }
   });
 }
 
 // Method to configure camera info for HomeKit
-FoscamPlatform.prototype.configureCamera = function(cameraConfig, mac) {
+FoscamPlatform.prototype.configureCamera = function (mac) {
   var self = this;
   var thisCamera = this.cameraInfo[mac];
   var name = "Foscam " + thisCamera.name;
   var uuid = UUIDGen.generate(mac);
 
-  // Initialize global cache
-  thisCamera.username = cameraConfig.username;
-  thisCamera.password = cameraConfig.password;
-  thisCamera.host = cameraConfig.host;
-  thisCamera.port = cameraConfig.port;
-  thisCamera.currentState = Characteristic.SecuritySystemCurrentState.DISARMED;
-  thisCamera.motionAlarm = false;
-  thisCamera.statusActive = false;
-  thisCamera.triggerInterval = 5;
-  thisCamera.conversion = [cameraConfig.stay, cameraConfig.away, cameraConfig.night];
-
-  if (thisCamera.ver == 0) {
-    // Older models only support 4-bit linkage
-    thisCamera.conversion = thisCamera.conversion.map(function(k) {return (k & 0x0f)});
-  } else {
-    // Newer models support push notification bit
-    thisCamera.conversion = thisCamera.conversion.map(function(k) {return (k & 0x8f)});
-  }
-
   // Setup for FoscamAccessory
-  var cameraSource = new FoscamAccessory(hap, cameraConfig, thisCamera.log);
-  cameraSource.info().then(function() {
+  var cameraSource = new FoscamAccessory(hap, thisCamera, thisCamera.log);
+  cameraSource.info().then(function () {
     // Setup accessory as CAMERA (17) category
     var newAccessory = new Accessory(name, uuid, 17);
     newAccessory.configureCameraSource(cameraSource);
@@ -221,7 +221,7 @@ FoscamPlatform.prototype.configureCamera = function(cameraConfig, mac) {
 }
 
 // Method to retrieve initial state
-FoscamPlatform.prototype.getInitState = function(accessory) {
+FoscamPlatform.prototype.getInitState = function (accessory) {
   accessory.getService(Service.SecuritySystem)
     .getCharacteristic(Characteristic.SecuritySystemCurrentState)
     .getValue();
@@ -232,25 +232,18 @@ FoscamPlatform.prototype.getInitState = function(accessory) {
 }
 
 // Method to get the security system current state
-FoscamPlatform.prototype.getCurrentState = function(mac, callback) {
+FoscamPlatform.prototype.getCurrentState = function (mac, callback) {
   var self = this;
   var thisCamera = this.cameraInfo[mac];
   var thisAccessory = this.accessories[mac];
 
-  // Setup the correct promise to use
-  if (thisCamera.ver == 0) {
-    var getConfig = this.foscamAPI[mac].getMotionDetectConfig();
-  } else {
-    var getConfig = this.foscamAPI[mac].getMotionDetectConfig1();
-  }
-
-  getConfig.then(function(config) {
-    if (config.result == 0) {
+  thisCamera.getConfig.then(function (config) {
+    if (config.result === 0) {
       // Save trigger interval for motion sensor
       thisCamera.triggerInterval = config.triggerInterval + 5;
 
       // Compute current state and target state
-      if (config.isEnable == 0) {
+      if (config.isEnable === 0) {
         thisCamera.currentState = Characteristic.SecuritySystemCurrentState.DISARMED;
       } else {
         if (thisCamera.conversion.indexOf(config.linkage) >= 0) {
@@ -284,38 +277,28 @@ FoscamPlatform.prototype.getCurrentState = function(mac, callback) {
 }
 
 // Method to get the security system target state
-FoscamPlatform.prototype.getTargetState = function(mac, callback) {
-  var self = this;
-  setTimeout(callback.bind(this, null, this.cameraInfo[mac].currentState), 500);
+FoscamPlatform.prototype.getTargetState = function (mac, callback) {
+  setTimeout(callback.bind(this, null, this.cameraInfo[mac].currentState), 1000);
 }
 
 // Method to set the security system target state
-FoscamPlatform.prototype.setTargetState = function(mac, state, callback) {
+FoscamPlatform.prototype.setTargetState = function (mac, state, callback) {
   var self = this;
   var thisCamera = this.cameraInfo[mac];
   var thisAccessory = this.accessories[mac];
-
-  // Setup the correct promise and function to use
-  if (thisCamera.ver == 0) {
-    var getConfig = this.foscamAPI[mac].getMotionDetectConfig();
-    var setConfig = function(config) {self.foscamAPI[mac].setMotionDetectConfig(config);};
-  } else {
-    var getConfig = this.foscamAPI[mac].getMotionDetectConfig1();
-    var setConfig = function(config) {self.foscamAPI[mac].setMotionDetectConfig1(config);};
-  }
 
   // Convert target state to isEnable
   var enable = state < 3 ? 1 : 0;
 
   // Get current config
-  getConfig.then(function(config) {
-    if (config.result == 0) {
+  thisCamera.getConfig.then(function (config) {
+    if (config.result === 0) {
       // Change isEnable and linkage to requested state
       config.isEnable = enable;
       if (enable) config.linkage = thisCamera.conversion[state];
 
       // Update config with requested state
-      setConfig(config);
+      thisCamera.setConfig(config);
 
       // Set motion sensor status
       thisAccessory.getService(Service.MotionSensor)
@@ -345,18 +328,18 @@ FoscamPlatform.prototype.setTargetState = function(mac, state, callback) {
 }
 
 // Method to get the motion sensor motion detected
-FoscamPlatform.prototype.getMotionDetected = function(mac, callback) {
+FoscamPlatform.prototype.getMotionDetected = function (mac, callback) {
   callback(null, this.cameraInfo[mac].motionAlarm);
 }
 
 // Method to handle identify request
-FoscamPlatform.prototype.identify = function(mac, paired, callback) {
+FoscamPlatform.prototype.identify = function (mac, paired, callback) {
   this.cameraInfo[mac].log("Identify requested!");
   callback();
 }
 
 // Method to start polling for motion
-FoscamPlatform.prototype.startMotionPolling = function(mac, error) {
+FoscamPlatform.prototype.startMotionPolling = function (mac, error) {
   var thisCamera = this.cameraInfo[mac];
   var thisFoscamBinary = this.foscamBinary[mac];
   if (error) thisCamera.log(error);
@@ -379,7 +362,7 @@ FoscamPlatform.prototype.startMotionPolling = function(mac, error) {
 }
 
 // Method to configure motion sensor when motion is detected
-FoscamPlatform.prototype.motionDetected = function(mac) {
+FoscamPlatform.prototype.motionDetected = function (mac) {
   var thisCamera = this.cameraInfo[mac];
   var thisAccessory = this.accessories[mac];
 
@@ -392,7 +375,7 @@ FoscamPlatform.prototype.motionDetected = function(mac) {
   thisCamera.log("Motion Detected!");
 
   // Reset motion detected after trigger interval
-  thisCamera.tout = setTimeout(function(thisCamera, thisAccessory) {
+  thisCamera.tout = setTimeout(function (thisCamera, thisAccessory) {
     thisCamera.tout = null;
     thisCamera.motionAlarm = false;
     thisAccessory.getService(Service.MotionSensor)
