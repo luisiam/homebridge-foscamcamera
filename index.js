@@ -305,6 +305,7 @@ FoscamPlatform.prototype.setTargetState = function (mac, state, callback) {
         .setCharacteristic(Characteristic.StatusActive, enable ? true : false);
 
       // Set security system current state
+      thisCamera.currentState = state;
       thisAccessory.getService(Service.SecuritySystem)
         .setCharacteristic(Characteristic.SecuritySystemCurrentState, state);
 
