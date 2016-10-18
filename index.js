@@ -278,7 +278,9 @@ FoscamPlatform.prototype.getCurrentState = function (mac, callback) {
 
 // Method to get the security system target state
 FoscamPlatform.prototype.getTargetState = function (mac, callback) {
-  setTimeout(callback.bind(this, null, this.cameraInfo[mac].currentState), 1000);
+  setTimeout(function (mac) {
+    callback.bind(null, this.cameraInfo[mac].currentState);
+  }.bind(this, mac), 1000);
 }
 
 // Method to set the security system target state
