@@ -239,6 +239,10 @@ FoscamPlatform.prototype.getInitState = function (accessory) {
   accessory.getService(Service.SecuritySystem)
     .getCharacteristic(Characteristic.SecuritySystemTargetState)
     .getValue();
+
+  accessory.getService(Service.MotionSensor)
+    .getCharacteristic(Characteristic.MotionDetected)
+    .getValue();
 }
 
 // Method to get the security system current state
