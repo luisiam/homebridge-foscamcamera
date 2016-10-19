@@ -24,6 +24,9 @@ function FoscamPlatform(log, config, api) {
   // HomeKit Current State: 0 (STAY_ARM), 1 (AWAY_ARM), 2 (NIGHT_ARM), 3 (DISARMED), 4 (ALARM_TRIGGERED)
   this.armState = ["Armed (Stay).", "Armed (Away).", "Armed (Night).", "Disarmed.", "Alarm Triggered."];
 
+  // Camera motion sensor sensitivity
+  this.sensitivity = [4, 3, 0, 1, 2];
+
   // Global cache
   this.accessories = {};
   this.foscamBinary = {};
@@ -76,9 +79,10 @@ FoscamPlatform.prototype.getInfo = function (cameraConfig, callback) {
   });
 
   // Retrieve camera info
-  Promise.all([thisFoscamAPI.getDevInfo(), thisFoscamAPI.getMotionDetectConfig()]).then(function (output) {
+  Promise.all([thisFoscamAPI.getDevInfo(), thisFoscamAPI.getMotionDetectConfig(), thisFoscamAPI.getMotionDetectConfig1()]).then(function (output) {
     var info = output[0];
     var config = output[1];
+    var config1 = output[2];
 
     if (info.result === 0) {
       var thisCamera = cameraConfig;
@@ -86,7 +90,19 @@ FoscamPlatform.prototype.getInfo = function (cameraConfig, callback) {
       // Initialize default config
       thisCamera.username = cameraConfig.username || "admin";
       thisCamera.port = cameraConfig.port || 88;
-      thisCamera.conversion = [cameraConfig.stay || 0, cameraConfig.away || 0, cameraConfig.night || 0];
+      thisCamera.linkage = [cameraConfig.stay || 0, cameraConfig.away || 0, cameraConfig.night || 0];
+      if (thisCamera.sensitivity === undefined) {
+        if (config.result === 0) thisCamera.sensitivity = self.sensitivity.indexOf(config.sensitivity);
+        if (config1.result === 0) thisCamera.sensitivity = self.sensitivity.indexOf(config1.sensitivity);
+      } else if (thisCamera.sensitivity < 0 || thisCamera.sensitivity > 4) {
+        throw new Error("Sensitivity " + thisCamera.sensitivity + " is out of range.");
+      }
+      if (thisCamera.triggerInterval === undefined) {
+        if (config.result === 0) thisCamera.triggerInterval = config.triggerInterval + 5;
+        if (config1.result === 0) thisCamera.triggerInterval = config1.triggerInterval + 5;
+      } else if (thisCamera.triggerInterval < 5 || thisCamera.triggerInterval > 15) {
+        throw new Error("Trigger interval " + thisCamera.triggerInterval + " is out of range.");
+      }
       thisCamera.speaker = {
         "enabled": cameraConfig.spkrEnable === undefined ? true : cameraConfig.spkrEnable,
         "compression": cameraConfig.spkrCompression === undefined ? true : cameraConfig.spkrCompression,
@@ -115,19 +131,21 @@ FoscamPlatform.prototype.getInfo = function (cameraConfig, callback) {
       thisCamera.currentState = Characteristic.SecuritySystemCurrentState.DISARMED;
       thisCamera.motionAlarm = false;
       thisCamera.statusActive = false;
-      thisCamera.triggerInterval = 5;
 
-      // Detect API
+      // Older API
       if (config.result === 0) {
         // Older models only support 4-bit linkage
-        thisCamera.conversion = thisCamera.conversion.map(function (k) {return (k & 0x0f)});
+        thisCamera.linkage = thisCamera.linkage.map(function (k) {return (k & 0x0f)});
 
         // Promises for older models
         thisCamera.getConfig = thisFoscamAPI.getMotionDetectConfig();
         thisCamera.setConfig = function (config) {thisFoscamAPI.setMotionDetectConfig(config);};
-      } else {
+      }
+
+      // Newer API
+      if (config1.result === 0) {
         // Newer models support push notification bit
-        thisCamera.conversion = thisCamera.conversion.map(function (k) {return (k & 0x8f)});
+        thisCamera.linkage = thisCamera.linkage.map(function (k) {return (k & 0x8f)});
 
         // Promises for newer models
         thisCamera.getConfig = thisFoscamAPI.getMotionDetectConfig1();
@@ -239,15 +257,12 @@ FoscamPlatform.prototype.getCurrentState = function (mac, callback) {
 
   thisCamera.getConfig.then(function (config) {
     if (config.result === 0) {
-      // Save trigger interval for motion sensor
-      thisCamera.triggerInterval = config.triggerInterval + 5;
-
       // Compute current state and target state
       if (config.isEnable === 0) {
         thisCamera.currentState = Characteristic.SecuritySystemCurrentState.DISARMED;
       } else {
-        if (thisCamera.conversion.indexOf(config.linkage) >= 0) {
-          thisCamera.currentState = thisCamera.conversion.indexOf(config.linkage);
+        if (thisCamera.linkage.indexOf(config.linkage) >= 0) {
+          thisCamera.currentState = thisCamera.linkage.indexOf(config.linkage);
         } else {
           thisCamera.currentState = Characteristic.SecuritySystemCurrentState.STAY_ARM;
         }
@@ -295,9 +310,11 @@ FoscamPlatform.prototype.setTargetState = function (mac, state, callback) {
   // Get current config
   thisCamera.getConfig.then(function (config) {
     if (config.result === 0) {
-      // Change isEnable and linkage to requested state
+      // Change isEnable, linkage, sensitivity, triggerInterval to requested state
       config.isEnable = enable;
-      if (enable) config.linkage = thisCamera.conversion[state];
+      if (enable) config.linkage = thisCamera.linkage[state];
+      config.sensitivity = self.sensitivity[thisCamera.sensitivity];
+      config.triggerInterval = thisCamera.triggerInterval - 5;
 
       // Update config with requested state
       thisCamera.setConfig(config);
