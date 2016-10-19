@@ -155,18 +155,10 @@ FoscamPlatform.prototype.getInfo = function (cameraConfig, callback) {
       // Workaround for empty serial number
       if (thisCamera.serial === "") thisCamera.serial = "Default-SerialNumber";
 
-      // Workaround for Infinity MAC address
-      var mac;
-      if (info.mac === Infinity) {
-        mac = UUIDGen.generate(info.devName).slice(-12).toUpperCase();
-      } else {
-        mac = info.mac;
-      }
-
       // Store camera information
-      self.cameraInfo[mac] = thisCamera;
-      self.foscamBinary[mac] = null;
-      callback(mac);
+      self.cameraInfo[info.mac] = thisCamera;
+      self.foscamBinary[info.mac] = null;
+      callback(info.mac);
     } else {
       callback(null, "Failed to retrieve camera information!");
     }
@@ -400,5 +392,5 @@ FoscamPlatform.prototype.motionDetected = function (mac) {
     thisCamera.motionAlarm = false;
     thisAccessory.getService(Service.MotionSensor)
       .setCharacteristic(Characteristic.MotionDetected, thisCamera.motionAlarm);
-  }.bind(this, thisCamera, thisAccessory), thisCamera.triggerInterval * 1000);
+  }.bind(this, thisCamera, thisAccessory), (thisCamera.triggerInterval - 1) * 1000);
 }
