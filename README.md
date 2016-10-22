@@ -10,6 +10,7 @@ Older verion using API 2.0: [homebridge-foscam2](https://github.com/luisiam/home
 # Prerequisites
 1. Node.js **v6.6.0** or above
 2. HomeBridge **v0.4.6** or above
+3. At this time only H.264 cameras are supported. There has been success reported with the Foscam C2, FI9821W V2, FI9831W and others.
 
 # Installation
 1. Install homebridge using `npm install -g homebridge`.
