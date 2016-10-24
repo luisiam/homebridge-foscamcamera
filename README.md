@@ -15,7 +15,8 @@ Older verion using API 2.0: [homebridge-foscam2](https://github.com/luisiam/home
 # Installation
 1. Install homebridge using `npm install -g homebridge`.
 2. Install this plugin using `npm install -g homebridge-foscamcamera`.
-3. Update your configuration file. See configuration sample below.
+ * For users installing with `sudo`, install the plugin using `sudo npm install -g --unsafe-perm homebridge-foscamcamera`
+4. Update your configuration file. See configuration sample below.
 
 # Configuration
 Edit your `config.json` accordingly. Configuration sample:
