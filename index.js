@@ -85,7 +85,7 @@ FoscamPlatform.prototype.getInfo = function (cameraConfig, callback) {
     var config1 = output[2];
 
     if (info.result === 0) {
-      var thisCamera = cameraConfig;
+      var thisCamera = JSON.parse(JSON.stringify(cameraConfig));
 
       // Initialize default config
       thisCamera.username = cameraConfig.username || "admin";
