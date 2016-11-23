@@ -8,9 +8,7 @@ Older verion using API 2.0: [homebridge-foscam2](https://github.com/luisiam/home
 **Pairing PIN is the same as the HomeBridge pairing PIN.**
 
 # Important Notice
-Currently, streaming only works on iOS 10.0. iOS 10.1+ enforces SRTP which is not implemented in the current streaming library.
-In addition, Foscam C1 streaming will not even work on iOS 10.0 due to funky firmware.
-Other than streaming, all the other functionalities should work as expected.
+Currently, streaming only works on iOS 10.0. iOS 10.1+ enforces SRTP which is not implemented in the current streaming library. In addition, Foscam C1 streaming will not even work on iOS 10.0 due to funky firmware. Other than streaming, all the other functionalities should work as expected.
 
 # Prerequisites
 1. Node.js **v6.6.0** or above
@@ -27,6 +25,7 @@ Edit your `config.json` accordingly. Configuration sample:
 ```
 "platforms": [{
     "platform": "FoscamCamera",
+    "name": "Foscam",
     "cameras": [{
         "username": "admin",
         "password": "password",
@@ -54,23 +53,24 @@ Edit your `config.json` accordingly. Configuration sample:
 
 ```
 
-| Fields           | Description                                                   | Default       | Required |
-|------------------|---------------------------------------------------------------|---------------|----------|
-| platform         | Must always be `FoscamCamera`.                                |               | Yes      |
-| cameras          | Array of camera config (multiple cameras supported).          |               | Yes      |
-| username         | Your camera login username.                                   | admin         | No       |
-| password         | Your camera login password.                                   |               | Yes      |
-| host             | Your camera IP address.                                       |               | Yes      |
-| port             | Your camera port.                                             | 88            | No       |
-| stay\*           | Configuration for Stay Arm.                                   | 0             | No       |
-| away\*           | Configuration for Away Arm.                                   | 0             | No       |
-| night\*          | Configuration for Night Arm.                                  | 0             | No       |
-| sensitivity      | Motion sensor sensitivity from 0 (lowest) to 4 (high).        | Camera Config | No       |
-| triggerInterval  | Time in `s` (5-15) of which motion sensor can be retriggered. | Camera Config | No       |
-| gain             | Gain in decibels to boost camera audio.                       | 0             | No       |
-| spkrEnable       | Enable camera speaker.                                        | true          | No       |
-| spkrCompression  | Enable audio compression.                                     | true          | No       |
-| spkrGain         | Gain in decibels to boost speaker volume.                     | 0             | No       |
+| Fields               | Description                                                   | Default       | Required |
+|----------------------|---------------------------------------------------------------|---------------|----------|
+| platform             | Must always be `FoscamCamera`.                                |               | Yes      |
+| name                 | For logging purposes.                                         |               | No       |
+| cameras              | Array of camera config (multiple cameras supported).          |               | Yes      |
+| \|- username         | Your camera login username.                                   | admin         | No       |
+| \|- password         | Your camera login password.                                   |               | Yes      |
+| \|- host             | Your camera IP address.                                       |               | Yes      |
+| \|- port             | Your camera port.                                             | 88            | No       |
+| \|- stay\*           | Configuration for Stay Arm.                                   | 0             | No       |
+| \|- away\*           | Configuration for Away Arm.                                   | 0             | No       |
+| \|- night\*          | Configuration for Night Arm.                                  | 0             | No       |
+| \|- sensitivity      | Motion sensor sensitivity from 0 (lowest) to 4 (high).        | Camera Config | No       |
+| \|- triggerInterval  | Time in `s` (5-15) of which motion sensor can be retriggered. | Camera Config | No       |
+| \|- gain             | Gain in decibels to boost camera audio.                       | 0             | No       |
+| \|- spkrEnable       | Enable camera speaker.                                        | true          | No       |
+| \|- spkrCompression  | Enable audio compression.                                     | true          | No       |
+| \|- spkrGain         | Gain in decibels to boost speaker volume.                     | 0             | No       |
 
 \*`stay`, `away`, `night` define configuration for different ARMED state.
 

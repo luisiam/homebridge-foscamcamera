@@ -1,7 +1,5 @@
 var FoscamAccessory = require("homebridge-foscam-stream").FoscamAccessory;
 var Foscam = require("foscam-client");
-var chalk = require("chalk");
-var util = require("util");
 var Accessory, Service, Characteristic, UUIDGen, hap;
 
 module.exports = function (homebridge) {
@@ -16,12 +14,11 @@ module.exports = function (homebridge) {
 
 function FoscamPlatform(log, config, api) {
   this.log = log;
-  this.platformLog = function (msg) {log(chalk.cyan("[FoscamCamera]"), msg);};
   this.config = config || {"platform": "FoscamCamera"};
   this.cameras = this.config.cameras || [];
 
   // HomeKit Current State: 0 (STAY_ARM), 1 (AWAY_ARM), 2 (NIGHT_ARM), 3 (DISARMED), 4 (ALARM_TRIGGERED)
-  this.armState = ["Armed (Stay).", "Armed (Away).", "Armed (Night).", "Disarmed.", "Alarm Triggered."];
+  this.armState = ["armed (stay).", "armed (away).", "armed (night).", "disarmed.", "alarm triggered."];
 
   // Camera motion sensor sensitivity
   this.sensitivity = [4, 3, 0, 1, 2];
@@ -53,11 +50,11 @@ FoscamPlatform.prototype.didFinishLaunching = function () {
           if (!error) {
             self.configureCamera(mac);
           } else {
-            self.platformLog(error);
+            self.log(error);
           }
         });
       } else {
-        self.platformLog("Missing Required Information!");
+        self.log("Missing Required Information!");
       }
     });
   }
@@ -124,12 +121,6 @@ FoscamPlatform.prototype.getInfo = function (cameraConfig, callback) {
         "gain": cameraConfig.spkrGain || 0
       };
 
-      // Function for logging
-      thisCamera.log = function () {
-        var msg = util.format.apply(util, Array.prototype.slice.call(arguments));
-        self.log(chalk.cyan("[Foscam " + info.devName + "]"), msg);
-      };
-
       // Remove unnecessary config
       delete thisCamera.stay;
       delete thisCamera.away;
@@ -173,7 +164,7 @@ FoscamPlatform.prototype.configureCamera = function (mac) {
   var uuid = UUIDGen.generate(mac);
 
   // Setup for FoscamAccessory
-  var cameraSource = new FoscamAccessory(hap, thisCamera, thisCamera.log);
+  var cameraSource = new FoscamAccessory(hap, thisCamera, this.log);
   cameraSource.info().then(function () {
     // Setup accessory as CAMERA (17) category
     var newAccessory = new Accessory(name, uuid, 17);
@@ -279,16 +270,16 @@ FoscamPlatform.prototype.getCurrentState = function (mac, callback) {
       thisAccessory.getService(Service.SecuritySystem)
         .setCharacteristic(Characteristic.StatusFault, false);
 
-      thisCamera.log("Current state: " + self.armState[thisCamera.currentState]);
+      self.log(thisCamera.name + " is " + self.armState[thisCamera.currentState]);
       callback(null, thisCamera.currentState);
     } else {
-      var error = "Failed to retrieve current state!";
+      var error = "Failed to retrieve " + thisCamera.name + " state!";
 
       // Set security system status fault to 1 in case of error
       thisAccessory.getService(Service.SecuritySystem)
         .setCharacteristic(Characteristic.StatusFault, true);
 
-      thisCamera.log(error);
+      self.log(error);
       callback(new Error(error));
     }
   });
@@ -349,16 +340,16 @@ FoscamPlatform.prototype.setTargetState = function (mac, state, callback) {
       thisAccessory.getService(Service.SecuritySystem)
         .setCharacteristic(Characteristic.StatusFault, false);
 
-      thisCamera.log(self.armState[state]);
+      self.log(thisCamera.name + " is set to " + self.armState[state]);
       callback(null);
     } else {
-      var error = "Failed to set target state!";
+      var error = "Failed to set " + thisCamera.name + " state!";
 
       // Set status fault to 1 in case of error
       thisAccessory.getService(Service.SecuritySystem)
         .setCharacteristic(Characteristic.StatusFault, true);
 
-      thisCamera.log(error);
+      self.log(error);
       callback(new Error(error));
     }
   });
@@ -371,7 +362,7 @@ FoscamPlatform.prototype.getMotionDetected = function (mac, callback) {
 
 // Method to handle identify request
 FoscamPlatform.prototype.identify = function (mac, paired, callback) {
-  this.cameraInfo[mac].log("Identify requested!");
+  this.log(this.cameraInfo[mac].name + " identify requested!");
   callback();
 }
 
@@ -410,7 +401,7 @@ FoscamPlatform.prototype.motionDetected = function (mac) {
   if (thisCamera.resetMotion) clearTimeout(thisCamera.resetMotion);
 
   // Set motion detected
-  if (thisCamera.motionAlarm === false) thisCamera.log("Motion Detected!");
+  if (thisCamera.motionAlarm === false) this.log(thisCamera.name + " Motion Detected!");
   thisCamera.motionAlarm = true;
   thisAccessory.getService(Service.MotionSensor)
     .setCharacteristic(Characteristic.MotionDetected, thisCamera.motionAlarm);
