@@ -129,7 +129,7 @@ FoscamPlatform.prototype.getInfo = function (cameraConfig, callback) {
       delete thisCamera.spkrGain;
       delete thisCamera.motionDetector;
 
-      // Storing camera info
+      // Store camera information
       thisCamera.name = info.devName.toString();
       thisCamera.model = info.productName.toString();
       thisCamera.serial = info.serialNo.toString();
@@ -140,6 +140,7 @@ FoscamPlatform.prototype.getInfo = function (cameraConfig, callback) {
       thisCamera.currentState = Characteristic.SecuritySystemCurrentState.DISARMED;
       thisCamera.motionAlarm = false;
       thisCamera.statusActive = false;
+      thisCamera.polling = null;
 
       // Older API
       if (config.result === 0) {
@@ -158,7 +159,7 @@ FoscamPlatform.prototype.getInfo = function (cameraConfig, callback) {
       // Workaround for empty serial number
       if (thisCamera.serial === "") thisCamera.serial = "Default-SerialNumber";
 
-      // Store camera information
+      // Store information to global
       self.foscamAPI[info.mac] = thisFoscamAPI;
       self.cameraInfo[info.mac] = thisCamera;
       callback(info.mac);
@@ -252,9 +253,9 @@ FoscamPlatform.prototype.getCurrentState = function (mac, callback) {
   var thisCamera = this.cameraInfo[mac];
   var thisAccessory = this.accessories[mac];
 
-  if (thisCamera.version == 0) {
+  if (thisCamera.version === 0) {
     var getConfig = thisFoscamAPI.getMotionDetectConfig();
-  } else if (thisCamera.version == 1) {
+  } else if (thisCamera.version === 1) {
     var getConfig = thisFoscamAPI.getMotionDetectConfig1();
   }
 
@@ -263,18 +264,16 @@ FoscamPlatform.prototype.getCurrentState = function (mac, callback) {
       // Compute current state and target state
       if (config.isEnable === 0) {
         thisCamera.currentState = Characteristic.SecuritySystemCurrentState.DISARMED;
-        if (thisCamera.polling) {
-          clearTimeout(thisCamera.polling);
-          thisCamera.polling = null;
-        }
       } else {
         if (thisCamera.linkage.indexOf(config.linkage) >= 0) {
           thisCamera.currentState = thisCamera.linkage.indexOf(config.linkage);
         } else {
           thisCamera.currentState = Characteristic.SecuritySystemCurrentState.STAY_ARM;
         }
-        if (!thisCamera.polling) this.startMotionPolling(mac);
       }
+
+      // Configre motion polling
+      this.startMotionPolling(mac, thisCamera.currentState);
 
       // Set motion sensor status active
       thisAccessory.getService(Service.MotionSensor)
@@ -316,29 +315,21 @@ FoscamPlatform.prototype.setTargetState = function (mac, state, callback) {
   // Convert target state to isEnable
   var enable = state < 3 ? 1 : 0;
 
-  if (enable) {
-    if (!thisCamera.polling) this.startMotionPolling(mac);
-  } else {
-    if (thisCamera.polling) {
-      clearTimeout(thisCamera.polling);
-      thisCamera.polling = null;
-    }
-  }
-  if (thisCamera.version == 0) {
+  if (thisCamera.version === 0) {
     var getConfig = thisFoscamAPI.getMotionDetectConfig();
     var setConfig = function (config) {thisFoscamAPI.setMotionDetectConfig(config);};
-  } else if (thisCamera.version == 1) {
+  } else if (thisCamera.version === 1) {
     var getConfig = thisFoscamAPI.getMotionDetectConfig1();
     var setConfig = function (config) {thisFoscamAPI.setMotionDetectConfig1(config);};
   }
 
   // Get current config
-  getConfig.then(function (config) {
+  getConfig.then(function (mac, config) {
     if (config.result === 0) {
       // Change isEnable, linkage, sensitivity, triggerInterval to requested state
       config.isEnable = enable;
       if (enable) config.linkage = thisCamera.linkage[state];
-      config.sensitivity = self.sensitivity[thisCamera.sensitivity];
+      config.sensitivity = this.sensitivity[thisCamera.sensitivity];
       config.triggerInterval = thisCamera.triggerInterval - 5;
 
       // Update config with requested state
@@ -353,11 +344,14 @@ FoscamPlatform.prototype.setTargetState = function (mac, state, callback) {
       thisAccessory.getService(Service.SecuritySystem)
         .setCharacteristic(Characteristic.SecuritySystemCurrentState, state);
 
+      // Configure motion polling
+      this.startMotionPolling(mac);
+
       // Set status fault
       thisAccessory.getService(Service.SecuritySystem)
         .setCharacteristic(Characteristic.StatusFault, false);
 
-      thisCamera.log(self.armState[state]);
+      thisCamera.log(this.armState[state]);
       callback(null);
     } else {
       var error = "Failed to set target state!";
@@ -369,7 +363,7 @@ FoscamPlatform.prototype.setTargetState = function (mac, state, callback) {
       thisCamera.log(error);
       callback(new Error(error));
     }
-  });
+  }.bind(this, mac));
 }
 
 // Method to get the motion sensor motion detected
@@ -388,11 +382,24 @@ FoscamPlatform.prototype.startMotionPolling = function (mac) {
   var thisFoscamAPI = this.foscamAPI[mac];
   var thisCamera = this.cameraInfo[mac];
 
-  this.foscamAPI[mac].getDevState().then(function (mac, state) {
-    if (state.motionDetectAlarm === 2) this.motionDetected(mac)
-  }.bind(this, mac));
+  // Clear polling
+  if (thisCamera.polling) clearTimeout(thisCamera.polling);
 
-  thisCamera.polling = setTimeout(this.startMotionPolling.bind(this,mac), 1000);
+  if (thisCamera.currentState !== 3) {
+    // Start polling if armed
+    thisCamera.polling = setTimeout(function (mac) {
+      thisCamera.polling = null;
+      thisFoscamAPI.getDevState().then(function (mac, state) {
+        if (state.motionDetectAlarm === 2) this.motionDetected(mac)
+
+        // Setup next polling
+        this.startMotionPolling(mac);
+      }.bind(this, mac));
+    }.bind(this, mac), 1000);
+  } else {
+    // Stop polling if disarmed
+    thisCamera.polling = null;
+  }
 }
 
 // Method to configure motion sensor when motion is detected
@@ -400,6 +407,7 @@ FoscamPlatform.prototype.motionDetected = function (mac) {
   var thisCamera = this.cameraInfo[mac];
   var thisAccessory = this.accessories[mac];
 
+  // Clear motion reset
   if (thisCamera.resetMotion) clearTimeout(thisCamera.resetMotion);
 
   // Set motion detected

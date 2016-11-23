@@ -7,10 +7,15 @@ Older verion using API 2.0: [homebridge-foscam2](https://github.com/luisiam/home
 **Due to protocol limitation, users will need to pair with the camera in a HomeKit app separately.<br>**
 **Pairing PIN is the same as the HomeBridge pairing PIN.**
 
+# Important Notice
+Currently, streaming only works on iOS 10.0. iOS 10.1+ enforces SRTP which is not implemented in the current streaming library.
+In addition, Foscam C1 streaming will not even work on iOS 10.0 due to funky firmware.
+Other than streaming, all the other functionalities should work as expected.
+
 # Prerequisites
 1. Node.js **v6.6.0** or above
 2. HomeBridge **v0.4.6** or above
-3. At this time only H.264 cameras are supported. There has been success reported with the Foscam C2, FI9821W V2, FI9831W and others.
+3. Only H.264 cameras are supported.
 
 # Installation
 1. Install homebridge using `npm install -g homebridge`.
