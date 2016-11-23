@@ -80,31 +80,41 @@ FoscamPlatform.prototype.getInfo = function (cameraConfig, callback) {
   // Retrieve camera info
   Promise.all([thisFoscamAPI.getDevInfo(), thisFoscamAPI.getMotionDetectConfig(), thisFoscamAPI.getMotionDetectConfig1()]).then(function (output) {
     var info = output[0];
-    var config = output[1];
-    var config1 = output[2];
 
     if (info.result === 0) {
+      // Create a copy of config
       var thisCamera = JSON.parse(JSON.stringify(cameraConfig));
 
+      if (output[1].result === 0) {
+        // Older API
+        var config = output[1];
+        var linkageMask = 0x0f;
+        thisCamera.version = 0;
+      } else if (output[2].result === 0) {
+        // Newer API
+        var config = output[2];
+        var linkageMask = 0xff;
+        thisCamera.version = 1;
+      }
+      
       // Initialize default config
       thisCamera.username = cameraConfig.username || "admin";
       thisCamera.port = cameraConfig.port || 88;
       thisCamera.linkage = [cameraConfig.stay || 0, cameraConfig.away || 0, cameraConfig.night || 0];
+      thisCamera.linkage = thisCamera.linkage.map(function (k) {return (k & linkageMask)});
 
       // Compute sensivity
-      if (thisCamera.sensitivity === undefined) {
-        if (config.result === 0) thisCamera.sensitivity = self.sensitivity.indexOf(config.sensitivity);
-        if (config1.result === 0) thisCamera.sensitivity = self.sensitivity.indexOf(config1.sensitivity);
-      } else if (thisCamera.sensitivity < 0 || thisCamera.sensitivity > 4) {
+      if (thisCamera.sensitivity < 0 || thisCamera.sensitivity > 4) {
         throw new Error("Sensitivity " + thisCamera.sensitivity + " is out of range.");
+      } else {
+        thisCamera.sensitivity = thisCamera.sensitivity || self.sensitivity.indexOf(config.sensitivity);
       }
 
       // Compute triggerInterval
-      if (thisCamera.triggerInterval === undefined) {
-        if (config.result === 0) thisCamera.triggerInterval = config.triggerInterval + 5;
-        if (config1.result === 0) thisCamera.triggerInterval = config1.triggerInterval + 5;
-      } else if (thisCamera.triggerInterval < 5 || thisCamera.triggerInterval > 15) {
+      if (thisCamera.triggerInterval < 5 || thisCamera.triggerInterval > 15) {
         throw new Error("Trigger interval " + thisCamera.triggerInterval + " is out of range.");
+      } else {
+        thisCamera.triggerInterval = thisCamera.triggerInterval || (config.triggerInterval + 5);
       }
 
       // Setup config for 2-way audio
@@ -141,20 +151,6 @@ FoscamPlatform.prototype.getInfo = function (cameraConfig, callback) {
       thisCamera.motionAlarm = false;
       thisCamera.statusActive = false;
       thisCamera.polling = null;
-
-      // Older API
-      if (config.result === 0) {
-        // Older models only support 4-bit linkage
-        thisCamera.linkage = thisCamera.linkage.map(function (k) {return (k & 0x0f)});
-        thisCamera.version = 0;
-      }
-
-      // Newer API
-      if (config1.result === 0) {
-        // Newer models support push notification bit
-        thisCamera.linkage = thisCamera.linkage.map(function (k) {return (k & 0x8f)});
-        thisCamera.version = 1;
-      }
 
       // Workaround for empty serial number
       if (thisCamera.serial === "") thisCamera.serial = "Default-SerialNumber";
@@ -259,7 +255,7 @@ FoscamPlatform.prototype.getCurrentState = function (mac, callback) {
     var getConfig = thisFoscamAPI.getMotionDetectConfig1();
   }
 
-  getConfig.then(function (mac, config) {
+  getConfig.then(function (config) {
     if (config.result === 0) {
       // Compute current state and target state
       if (config.isEnable === 0) {
@@ -273,7 +269,7 @@ FoscamPlatform.prototype.getCurrentState = function (mac, callback) {
       }
 
       // Configre motion polling
-      this.startMotionPolling(mac, thisCamera.currentState);
+      self.startMotionPolling(mac, thisCamera.currentState);
 
       // Set motion sensor status active
       thisAccessory.getService(Service.MotionSensor)
@@ -283,7 +279,7 @@ FoscamPlatform.prototype.getCurrentState = function (mac, callback) {
       thisAccessory.getService(Service.SecuritySystem)
         .setCharacteristic(Characteristic.StatusFault, false);
 
-      thisCamera.log("Current state: " + this.armState[thisCamera.currentState]);
+      thisCamera.log("Current state: " + self.armState[thisCamera.currentState]);
       callback(null, thisCamera.currentState);
     } else {
       var error = "Failed to retrieve current state!";
@@ -295,14 +291,16 @@ FoscamPlatform.prototype.getCurrentState = function (mac, callback) {
       thisCamera.log(error);
       callback(new Error(error));
     }
-  }.bind(this, mac));
+  });
 }
 
 // Method to get the security system target state
 FoscamPlatform.prototype.getTargetState = function (mac, callback) {
-  setTimeout(function (mac) {
-    callback(null, this.cameraInfo[mac].currentState);
-  }.bind(this, mac), 1000);
+  var self = this;
+
+  setTimeout(function () {
+    callback(null, self.cameraInfo[mac].currentState);
+  }, 1000);
 }
 
 // Method to set the security system target state
@@ -324,12 +322,12 @@ FoscamPlatform.prototype.setTargetState = function (mac, state, callback) {
   }
 
   // Get current config
-  getConfig.then(function (mac, config) {
+  getConfig.then(function (config) {
     if (config.result === 0) {
       // Change isEnable, linkage, sensitivity, triggerInterval to requested state
       config.isEnable = enable;
       if (enable) config.linkage = thisCamera.linkage[state];
-      config.sensitivity = this.sensitivity[thisCamera.sensitivity];
+      config.sensitivity = self.sensitivity[thisCamera.sensitivity];
       config.triggerInterval = thisCamera.triggerInterval - 5;
 
       // Update config with requested state
@@ -345,13 +343,13 @@ FoscamPlatform.prototype.setTargetState = function (mac, state, callback) {
         .setCharacteristic(Characteristic.SecuritySystemCurrentState, state);
 
       // Configure motion polling
-      this.startMotionPolling(mac);
+      self.startMotionPolling(mac);
 
       // Set status fault
       thisAccessory.getService(Service.SecuritySystem)
         .setCharacteristic(Characteristic.StatusFault, false);
 
-      thisCamera.log(this.armState[state]);
+      thisCamera.log(self.armState[state]);
       callback(null);
     } else {
       var error = "Failed to set target state!";
@@ -363,7 +361,7 @@ FoscamPlatform.prototype.setTargetState = function (mac, state, callback) {
       thisCamera.log(error);
       callback(new Error(error));
     }
-  }.bind(this, mac));
+  });
 }
 
 // Method to get the motion sensor motion detected
@@ -379,6 +377,7 @@ FoscamPlatform.prototype.identify = function (mac, paired, callback) {
 
 // Method to start polling for motion
 FoscamPlatform.prototype.startMotionPolling = function (mac) {
+  var self = this;
   var thisFoscamAPI = this.foscamAPI[mac];
   var thisCamera = this.cameraInfo[mac];
 
@@ -387,15 +386,15 @@ FoscamPlatform.prototype.startMotionPolling = function (mac) {
 
   if (thisCamera.currentState !== 3) {
     // Start polling if armed
-    thisCamera.polling = setTimeout(function (mac) {
+    thisCamera.polling = setTimeout(function () {
       thisCamera.polling = null;
-      thisFoscamAPI.getDevState().then(function (mac, state) {
-        if (state.motionDetectAlarm === 2) this.motionDetected(mac)
+      thisFoscamAPI.getDevState().then(function (state) {
+        if (state.motionDetectAlarm === 2) self.motionDetected(mac);
 
         // Setup next polling
-        this.startMotionPolling(mac);
-      }.bind(this, mac));
-    }.bind(this, mac), 1000);
+        self.startMotionPolling(mac);
+      });
+    }, 1000);
   } else {
     // Stop polling if disarmed
     thisCamera.polling = null;
@@ -422,5 +421,5 @@ FoscamPlatform.prototype.motionDetected = function (mac) {
     thisCamera.motionAlarm = false;
     thisAccessory.getService(Service.MotionSensor)
       .setCharacteristic(Characteristic.MotionDetected, thisCamera.motionAlarm);
-  }.bind(this, thisCamera, thisAccessory), (thisCamera.triggerInterval - 1) * 1000);
+  }, (thisCamera.triggerInterval - 1) * 1000);
 }
