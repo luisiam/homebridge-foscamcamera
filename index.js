@@ -389,7 +389,6 @@ FoscamPlatform.prototype.startMotionPolling = function (mac) {
   var thisCamera = this.cameraInfo[mac];
 
   this.foscamAPI[mac].getDevState().then(function (mac, state) {
-    thisCamera.log(state.motionDetectAlarm);
     if (state.motionDetectAlarm === 2) this.motionDetected(mac)
   }.bind(this, mac));
 
