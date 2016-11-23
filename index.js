@@ -106,15 +106,15 @@ FoscamPlatform.prototype.getInfo = function (cameraConfig, callback) {
       // Compute sensivity
       if (thisCamera.sensitivity < 0 || thisCamera.sensitivity > 4) {
         throw new Error("Sensitivity " + thisCamera.sensitivity + " is out of range.");
-      } else {
-        thisCamera.sensitivity = thisCamera.sensitivity || self.sensitivity.indexOf(config.sensitivity);
+      } else if (thisCamera.sensitivity === undefined) {
+        thisCamera.sensitivity = self.sensitivity.indexOf(config.sensitivity);
       }
 
       // Compute triggerInterval
       if (thisCamera.triggerInterval < 5 || thisCamera.triggerInterval > 15) {
         throw new Error("Trigger interval " + thisCamera.triggerInterval + " is out of range.");
-      } else {
-        thisCamera.triggerInterval = thisCamera.triggerInterval || (config.triggerInterval + 5);
+      } else if (thisCamera.triggerInterval === undefined) {
+        thisCamera.triggerInterval = config.triggerInterval + 5;
       }
 
       // Setup config for 2-way audio
