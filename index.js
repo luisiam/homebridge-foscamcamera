@@ -401,13 +401,15 @@ FoscamPlatform.prototype.motionDetected = function (mac) {
   if (thisCamera.resetMotion) clearTimeout(thisCamera.resetMotion);
 
   // Set motion detected
-  if (thisCamera.motionAlarm === false) this.log(thisCamera.name + " Motion Detected!");
-  thisCamera.motionAlarm = true;
-  thisAccessory.getService(Service.MotionSensor)
-    .setCharacteristic(Characteristic.MotionDetected, thisCamera.motionAlarm);
+  if (thisCamera.motionAlarm === false) {
+    this.log(thisCamera.name + " Motion Detected!");
+    thisCamera.motionAlarm = true;
+    thisAccessory.getService(Service.MotionSensor)
+      .setCharacteristic(Characteristic.MotionDetected, thisCamera.motionAlarm);
+  }
 
   // Reset motion detected after trigger interval
-  thisCamera.resetMotion = setTimeout(function (thisCamera, thisAccessory) {
+  thisCamera.resetMotion = setTimeout(function () {
     thisCamera.resetMotion = null;
     thisCamera.motionAlarm = false;
     thisAccessory.getService(Service.MotionSensor)
