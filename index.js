@@ -260,7 +260,7 @@ FoscamPlatform.prototype.getCurrentState = function (mac, callback) {
       }
 
       // Configre motion polling
-      self.startMotionPolling(mac, thisCamera.currentState);
+      self.startMotionPolling(mac);
 
       // Set motion sensor status active
       thisAccessory.getService(Service.MotionSensor)
@@ -373,22 +373,16 @@ FoscamPlatform.prototype.startMotionPolling = function (mac) {
   var thisCamera = this.cameraInfo[mac];
 
   // Clear polling
-  if (thisCamera.polling) clearTimeout(thisCamera.polling);
+  clearTimeout(thisCamera.polling);
 
+  // Start polling if armed
   if (thisCamera.currentState !== 3) {
-    // Start polling if armed
-    thisCamera.polling = setTimeout(function () {
-      thisCamera.polling = null;
-      thisFoscamAPI.getDevState().then(function (state) {
-        if (state.motionDetectAlarm === 2) self.motionDetected(mac);
+    thisFoscamAPI.getDevState().then(function (state) {
+      if (state.motionDetectAlarm === 2) self.motionDetected(mac);
+    });
 
-        // Setup next polling
-        self.startMotionPolling(mac);
-      });
-    }, 1000);
-  } else {
-    // Stop polling if disarmed
-    thisCamera.polling = null;
+    // Setup next polling
+    thisCamera.polling = setTimeout(this.startMotionPolling.bind(this, mac), 1000);
   }
 }
 
@@ -398,7 +392,7 @@ FoscamPlatform.prototype.motionDetected = function (mac) {
   var thisAccessory = this.accessories[mac];
 
   // Clear motion reset
-  if (thisCamera.resetMotion) clearTimeout(thisCamera.resetMotion);
+  clearTimeout(thisCamera.resetMotion);
 
   // Set motion detected
   if (thisCamera.motionAlarm === false) {
@@ -410,7 +404,6 @@ FoscamPlatform.prototype.motionDetected = function (mac) {
 
   // Reset motion detected after trigger interval
   thisCamera.resetMotion = setTimeout(function () {
-    thisCamera.resetMotion = null;
     thisCamera.motionAlarm = false;
     thisAccessory.getService(Service.MotionSensor)
       .setCharacteristic(Characteristic.MotionDetected, thisCamera.motionAlarm);
