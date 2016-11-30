@@ -81,16 +81,17 @@ FoscamPlatform.prototype.getInfo = function (cameraConfig, callback) {
     if (info.result === 0) {
       // Create a copy of config
       var thisCamera = JSON.parse(JSON.stringify(cameraConfig));
+      var config, linkageMask;
 
       if (output[1].result === 0) {
         // Older API
-        var config = output[1];
-        var linkageMask = 0x0f;
+        config = output[1];
+        linkageMask = 0x0f;
         thisCamera.version = 0;
       } else if (output[2].result === 0) {
         // Newer API
-        var config = output[2];
-        var linkageMask = 0xff;
+        config = output[2];
+        linkageMask = 0xff;
         thisCamera.version = 1;
       }
       
@@ -116,8 +117,8 @@ FoscamPlatform.prototype.getInfo = function (cameraConfig, callback) {
 
       // Setup config for 2-way audio
       thisCamera.speaker = {
-        "enabled": cameraConfig.spkrEnable === undefined ? true : cameraConfig.spkrEnable,
-        "compression": cameraConfig.spkrCompression === undefined ? true : cameraConfig.spkrCompression,
+        "enabled": cameraConfig.spkrEnable !== false,
+        "compression": cameraConfig.spkrCompression !== false,
         "gain": cameraConfig.spkrGain || 0
       };
 
