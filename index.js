@@ -164,6 +164,8 @@ FoscamPlatform.prototype.configureCamera = function (mac) {
   var name = "Foscam " + thisCamera.name;
   var uuid = UUIDGen.generate(mac);
 
+  this.log("Initializing platform accessory '" + name + "'...");
+
   // Setup for FoscamAccessory
   var cameraSource = new FoscamAccessory(hap, thisCamera, this.log);
   cameraSource.info().then(function () {
@@ -177,50 +179,57 @@ FoscamPlatform.prototype.configureCamera = function (mac) {
     // Add HomeKit Motion Sensor Service
     newAccessory.addService(Service.MotionSensor, name + " Motion Sensor");
 
-    // Setup HomeKit accessory information
-    newAccessory.getService(Service.AccessoryInformation)
-      .setCharacteristic(Characteristic.Manufacturer, "Foscam Digital Technologies LLC")
-      .setCharacteristic(Characteristic.Model, thisCamera.model)
-      .setCharacteristic(Characteristic.SerialNumber, thisCamera.serial)
-      .setCharacteristic(Characteristic.FirmwareRevision, thisCamera.fw)
-      .setCharacteristic(Characteristic.HardwareRevision, thisCamera.hw);
-
     // Setup listeners for different events
-    newAccessory.getService(Service.SecuritySystem)
-      .getCharacteristic(Characteristic.SecuritySystemCurrentState)
-      .on('get', self.getCurrentState.bind(self, mac));
-
-    newAccessory.getService(Service.SecuritySystem)
-      .getCharacteristic(Characteristic.SecuritySystemTargetState)
-      .on('get', self.getTargetState.bind(self, mac))
-      .on('set', self.setTargetState.bind(self, mac));
-
-    newAccessory.getService(Service.SecuritySystem)
-      .getCharacteristic(Characteristic.StatusFault);
-
-    newAccessory.getService(Service.MotionSensor)
-      .getCharacteristic(Characteristic.MotionDetected)
-      .on('get', self.getMotionDetected.bind(self, mac));
-
-    newAccessory.getService(Service.MotionSensor)
-      .getCharacteristic(Characteristic.StatusActive);
-
-    newAccessory.getService(Service.MotionSensor)
-      .getCharacteristic(Characteristic.StatusFault);
-
-    newAccessory.on('identify', self.identify.bind(self, mac));
+    self.setService(newAccessory, mac);
 
     // Publish accessories to HomeKit
     self.api.publishCameraAccessories("FoscamCamera", [newAccessory]);
     self.accessories[mac] = newAccessory;
 
     // Retrieve initial state
-    self.getInitState(newAccessory);
+    self.getInitState(newAccessory, thisCamera);
   });
 }
 
+// Method to setup listeners for different events
+FoscamPlatform.prototype.setService = function (accessory, mac) {
+  // Setup listeners for different events
+  accessory.getService(Service.SecuritySystem)
+    .getCharacteristic(Characteristic.SecuritySystemCurrentState)
+    .on('get', this.getCurrentState.bind(this, mac));
+
+  accessory.getService(Service.SecuritySystem)
+    .getCharacteristic(Characteristic.SecuritySystemTargetState)
+    .on('get', this.getTargetState.bind(this, mac))
+    .on('set', this.setTargetState.bind(this, mac));
+
+  accessory.getService(Service.SecuritySystem)
+    .getCharacteristic(Characteristic.StatusFault);
+
+  accessory.getService(Service.MotionSensor)
+    .getCharacteristic(Characteristic.MotionDetected)
+    .on('get', this.getMotionDetected.bind(this, mac));
+
+  accessory.getService(Service.MotionSensor)
+    .getCharacteristic(Characteristic.StatusActive);
+
+  accessory.getService(Service.MotionSensor)
+    .getCharacteristic(Characteristic.StatusFault);
+
+  accessory.on('identify', this.identify.bind(this, mac));
+}
+
 // Method to retrieve initial state
-FoscamPlatform.prototype.getInitState = function (accessory) {
+FoscamPlatform.prototype.getInitState = function (accessory, info) {
+  // Update HomeKit accessory information
+  accessory.getService(Service.AccessoryInformation)
+    .setCharacteristic(Characteristic.Manufacturer, "Foscam Digital Technologies LLC")
+    .setCharacteristic(Characteristic.Model, info.model)
+    .setCharacteristic(Characteristic.SerialNumber, info.serial)
+    .setCharacteristic(Characteristic.FirmwareRevision, info.fw)
+    .setCharacteristic(Characteristic.HardwareRevision, info.hw);
+
+  // Retrieve initial state
   accessory.getService(Service.SecuritySystem)
     .getCharacteristic(Characteristic.SecuritySystemCurrentState)
     .getValue();
