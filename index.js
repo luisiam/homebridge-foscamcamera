@@ -141,8 +141,7 @@ FoscamPlatform.prototype.getInfo = function (cameraConfig, callback) {
       // Initialize global cache
       thisCamera.currentState = Characteristic.SecuritySystemCurrentState.DISARMED;
       thisCamera.motionAlarm = false;
-      thisCamera.statusActive = false;
-      thisCamera.polling = null;
+      thisCamera.statusActive = 0;
 
       // Workaround for empty serial number
       if (thisCamera.serial === "") thisCamera.serial = "Default-SerialNumber";
@@ -184,6 +183,8 @@ FoscamPlatform.prototype.configureCamera = function (mac) {
 
     // Publish accessories to HomeKit
     self.api.publishCameraAccessories("FoscamCamera", [newAccessory]);
+
+    // Store accessory in cache
     self.accessories[mac] = newAccessory;
 
     // Retrieve initial state
@@ -193,7 +194,7 @@ FoscamPlatform.prototype.configureCamera = function (mac) {
 
 // Method to setup listeners for different events
 FoscamPlatform.prototype.setService = function (accessory, mac) {
-  // Setup listeners for different events
+  // Setup listeners for Security System events
   accessory.getService(Service.SecuritySystem)
     .getCharacteristic(Characteristic.SecuritySystemCurrentState)
     .on('get', this.getCurrentState.bind(this, mac));
@@ -206,6 +207,7 @@ FoscamPlatform.prototype.setService = function (accessory, mac) {
   accessory.getService(Service.SecuritySystem)
     .getCharacteristic(Characteristic.StatusFault);
 
+  // Setup listeners for Motion Sensor events
   accessory.getService(Service.MotionSensor)
     .getCharacteristic(Characteristic.MotionDetected)
     .on('get', this.getMotionDetected.bind(this, mac));
@@ -215,6 +217,13 @@ FoscamPlatform.prototype.setService = function (accessory, mac) {
 
   accessory.getService(Service.MotionSensor)
     .getCharacteristic(Characteristic.StatusFault);
+
+  // Setup additional Accessory Information
+  accessory.getService(Service.AccessoryInformation)
+    .getCharacteristic(Characteristic.FirmwareRevision);
+
+  accessory.getService(Service.AccessoryInformation)
+    .getCharacteristic(Characteristic.HardwareRevision);
 
   accessory.on('identify', this.identify.bind(this, mac));
 }
@@ -278,7 +287,7 @@ FoscamPlatform.prototype.getCurrentState = function (mac, callback) {
 
       // Set security system status fault
       thisAccessory.getService(Service.SecuritySystem)
-        .setCharacteristic(Characteristic.StatusFault, false);
+        .setCharacteristic(Characteristic.StatusFault, 0);
 
       self.log(thisCamera.name + " is " + self.armState[thisCamera.currentState]);
       callback(null, thisCamera.currentState);
@@ -287,7 +296,7 @@ FoscamPlatform.prototype.getCurrentState = function (mac, callback) {
 
       // Set security system status fault to 1 in case of error
       thisAccessory.getService(Service.SecuritySystem)
-        .setCharacteristic(Characteristic.StatusFault, true);
+        .setCharacteristic(Characteristic.StatusFault, 1);
 
       self.log(error);
       callback(new Error(error));
@@ -348,7 +357,7 @@ FoscamPlatform.prototype.setTargetState = function (mac, state, callback) {
 
       // Set status fault
       thisAccessory.getService(Service.SecuritySystem)
-        .setCharacteristic(Characteristic.StatusFault, false);
+        .setCharacteristic(Characteristic.StatusFault, 0);
 
       self.log(thisCamera.name + " is set to " + self.armState[state]);
       callback(null);
@@ -357,7 +366,7 @@ FoscamPlatform.prototype.setTargetState = function (mac, state, callback) {
 
       // Set status fault to 1 in case of error
       thisAccessory.getService(Service.SecuritySystem)
-        .setCharacteristic(Characteristic.StatusFault, true);
+        .setCharacteristic(Characteristic.StatusFault, 1);
 
       self.log(error);
       callback(new Error(error));
