@@ -89,6 +89,6 @@ bit 2 = Snap picture<br>
 bit 3 = Record<br>
 bit 7 = Push notification
 
-Note: The configuration is defined as int, thus the followings are valid, e.g. 0 (Do Nothing), 1 (Ring), 2 (Email), 3 (Ring + Email), 4 (Record), 12 (Picture and Record), 13 (Ring, Picture and Record), etc.
+Note: The configuration is defined as int, thus the followings are valid, e.g. 0 (Do Nothing), 1 (Ring), 2 (Email), 3 (Ring + Email), 4 (Picture), 12 (Picture and Record), 13 (Ring, Picture and Record), etc.
 
 P.S.: Any ARMED state will activate motion detection by default.
