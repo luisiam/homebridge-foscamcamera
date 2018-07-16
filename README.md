@@ -8,7 +8,8 @@ Older verion using API 2.0: [homebridge-foscam2](https://github.com/luisiam/home
 **Pairing PIN is the same as the HomeBridge pairing PIN.**
 
 # Important Notice
-Currently, streaming only works on iOS 10.0. iOS 10.1+ enforces SRTP which is not implemented in the current streaming library. In addition, Foscam C1 streaming will not even work on iOS 10.0 due to funky firmware. Other than streaming, all the other functionalities should work as expected.
+This version replaced `homebridge-foscam-stream` with `homebridge-camera-ffmpeg`.  You will need to add a videoConfig section to your `config.json`.  
+See [homebridge-camera-ffmpeg](https://github.com/KhaosT/homebridge-camera-ffmpeg) for configuration instructions.
 
 # Prerequisites
 1. Node.js **v6.6.0** or above
@@ -33,7 +34,15 @@ Edit your `config.json` accordingly. Configuration sample:
         "port": 88,
         "stay": 13,
         "away": 15,
-        "night": 14
+        "night": 14,
+        "videoConfig": {
+            "source": "-re -i rtsp://myfancy_rtsp_stream",
+            "stillImageSource": "-i http://faster_still_image_grab_url/this_is_optional.jpg",
+            "maxStreams": 2,
+            "maxWidth": 1280,
+            "maxHeight": 720,
+            "maxFPS": 30
+        }
     }, {
         "username": "admin2",
         "password": "password2",
