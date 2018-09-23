@@ -1,4 +1,4 @@
-var FoscamAccessory = require("homebridge-foscam-stream").FoscamAccessory;
+var FFMPEG = require("homebridge-camera-ffmpeg/ffmpeg").FFMPEG;
 var Foscam = require("foscam-client");
 var Accessory, Service, Characteristic, UUIDGen, hap;
 
@@ -70,7 +70,7 @@ FoscamPlatform.prototype.getInfo = function (cameraConfig, callback) {
     password: cameraConfig.password,
     host: cameraConfig.host,
     port: cameraConfig.port,
-    protocol: 'http',
+    protocol: cameraConfig.protocol || 'http',
     rejectUnauthorizedCerts: true
   });
 
@@ -166,30 +166,28 @@ FoscamPlatform.prototype.configureCamera = function (mac) {
   this.log("Initializing platform accessory '" + name + "'...");
 
   // Setup for FoscamAccessory
-  var cameraSource = new FoscamAccessory(hap, thisCamera, this.log);
-  cameraSource.info().then(function () {
-    // Setup accessory as CAMERA (17) category
-    var newAccessory = new Accessory(name, uuid, 17);
-    newAccessory.configureCameraSource(cameraSource);
+  var videoProcessor = self.config.videoProcessor || 'ffmpeg';
+  var cameraSource = new FFMPEG(hap, thisCamera, self.log, videoProcessor);
+  var newAccessory = new Accessory(name, uuid, hap.Accessory.Categories.CAMERA);
+  newAccessory.configureCameraSource(cameraSource);
 
-    // Add HomeKit Security System Service
-    newAccessory.addService(Service.SecuritySystem, name + " Motion Detection");
+  // Add HomeKit Security System Service
+  newAccessory.addService(Service.SecuritySystem, name + " Motion Detection");
 
-    // Add HomeKit Motion Sensor Service
-    newAccessory.addService(Service.MotionSensor, name + " Motion Sensor");
+  // Add HomeKit Motion Sensor Service
+  newAccessory.addService(Service.MotionSensor, name + " Motion Sensor");
 
-    // Setup listeners for different events
-    self.setService(newAccessory, mac);
+  // Setup listeners for different events
+  self.setService(newAccessory, mac);
 
-    // Publish accessories to HomeKit
-    self.api.publishCameraAccessories("FoscamCamera", [newAccessory]);
+  // Publish accessories to HomeKit
+  self.api.publishCameraAccessories("FoscamCamera", [newAccessory]);
 
-    // Store accessory in cache
-    self.accessories[mac] = newAccessory;
+  // Store accessory in cache
+  self.accessories[mac] = newAccessory;
 
-    // Retrieve initial state
-    self.getInitState(newAccessory, thisCamera);
-  });
+  // Retrieve initial state
+  self.getInitState(newAccessory, thisCamera);
 }
 
 // Method to setup listeners for different events
