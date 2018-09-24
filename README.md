@@ -7,14 +7,11 @@ Older verion using API 2.0: [homebridge-foscam2](https://github.com/luisiam/home
 **Due to protocol limitation, users will need to pair with the camera in a HomeKit app separately.<br>**
 **Pairing PIN is the same as the HomeBridge pairing PIN.**
 
-# Important Notice
-This version replaced `homebridge-foscam-stream` with `homebridge-camera-ffmpeg`.  You will need to add a videoConfig section to your `config.json`.  
-See [homebridge-camera-ffmpeg](https://github.com/KhaosT/homebridge-camera-ffmpeg) for configuration instructions.
-
 # Prerequisites
 1. Node.js **v6.6.0** or above
 2. HomeBridge **v0.4.6** or above
-3. Only H.264 cameras are supported.
+3. FFmpeg
+4. Only H.264 cameras are supported.
 
 # Installation
 1. Install homebridge using `npm install -g homebridge`.
@@ -43,20 +40,6 @@ Edit your `config.json` accordingly. Configuration sample:
             "maxHeight": 720,
             "maxFPS": 30
         }
-    }, {
-        "username": "admin2",
-        "password": "password2",
-        "host": "192.168.1.20",
-        "port": 98,
-        "stay": 0,
-        "away": 14,
-        "night": 13,
-        "sensitivity": 2,
-        "triggerInterval": 5,
-        "gain": 6,
-        "spkrEnable": true,
-        "spkrCompression": true,
-        "spkrGain": 1
     }]
 }]
 
@@ -76,12 +59,10 @@ Edit your `config.json` accordingly. Configuration sample:
 | \|- night\*          | Configuration for Night Arm.                                  | 0             | No       |
 | \|- sensitivity      | Motion sensor sensitivity from 0 (lowest) to 4 (high).        | Camera Config | No       |
 | \|- triggerInterval  | Time in `s` (5-15) of which motion sensor can be retriggered. | Camera Config | No       |
-| \|- gain             | Gain in decibels to boost camera audio.                       | 0             | No       |
-| \|- spkrEnable       | Enable camera speaker.                                        | true          | No       |
-| \|- spkrCompression  | Enable audio compression.                                     | true          | No       |
-| \|- spkrGain         | Gain in decibels to boost speaker volume.                     | 0             | No       |
+| \|- videoConfig\**   | Array of video config for streaming.                          |               | Yes      |
 
-\*`stay`, `away`, `night` define configuration for different ARMED state.
+\*`stay`, `away`, `night` define configuration for different ARMED state.<br>
+\*\*reference [homebridge-camera-ffmpeg](https://github.com/KhaosT/homebridge-camera-ffmpeg) for configuration instructions.<br>
 
 The supported configurations depend on your device. The Foscam public CGI defines the following:<br>
 bit 3 | bit 2 | bit 1 | bit 0<br>
