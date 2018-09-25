@@ -32,6 +32,10 @@ Edit your `config.json` accordingly. Configuration sample:
         "stay": 13,
         "away": 15,
         "night": 14,
+        "armPreset": "Start",
+        "disarmPreset": "LeftMost",
+        "sensitivity": 2,
+        "triggerInterval": 5,
         "videoConfig": {
             "source": "-re -i rtsp://myfancy_rtsp_stream",
             "stillImageSource": "-i http://faster_still_image_grab_url/this_is_optional.jpg",
@@ -57,6 +61,8 @@ Edit your `config.json` accordingly. Configuration sample:
 | \|- stay\*           | Configuration for Stay Arm.                                   | 0             | No       |
 | \|- away\*           | Configuration for Away Arm.                                   | 0             | No       |
 | \|- night\*          | Configuration for Night Arm.                                  | 0             | No       |
+| \|- armPreset        | Preset point name for arm state.                              | `undefined`   | No       |
+| \|- disarmPreset     | Preset point name for disarm state.                           | `undefined`   | No       |
 | \|- sensitivity      | Motion sensor sensitivity from 0 (lowest) to 4 (high).        | Camera Config | No       |
 | \|- triggerInterval  | Time in `s` (5-15) of which motion sensor can be retriggered. | Camera Config | No       |
 | \|- videoConfig\**   | Array of video config for streaming.                          |               | Yes      |
