@@ -94,7 +94,7 @@ FoscamPlatform.prototype.getInfo = function (cameraConfig, callback) {
         linkageMask = 0xff;
         thisCamera.version = 1;
       }
-      
+
       // Initialize default config
       thisCamera.username = cameraConfig.username || "admin";
       thisCamera.port = cameraConfig.port || 88;
@@ -115,21 +115,10 @@ FoscamPlatform.prototype.getInfo = function (cameraConfig, callback) {
         thisCamera.triggerInterval = config.triggerInterval + 5;
       }
 
-      // Setup config for 2-way audio
-      thisCamera.speaker = {
-        "enabled": cameraConfig.spkrEnable !== false,
-        "compression": cameraConfig.spkrCompression !== false,
-        "gain": cameraConfig.spkrGain || 0
-      };
-
       // Remove unnecessary config
       delete thisCamera.stay;
       delete thisCamera.away;
       delete thisCamera.night;
-      delete thisCamera.spkrEnable;
-      delete thisCamera.spkrCompression;
-      delete thisCamera.spkrGain;
-      delete thisCamera.motionDetector;
 
       // Store camera information
       thisCamera.name = info.devName.toString();
@@ -327,6 +316,13 @@ FoscamPlatform.prototype.setTargetState = function (mac, state, callback) {
   } else if (thisCamera.version === 1) {
     var getConfig = thisFoscamAPI.getMotionDetectConfig1();
     var setConfig = function (config) {thisFoscamAPI.setMotionDetectConfig1(config);};
+  }
+
+  // Set PTZ Preset
+  var ptzPreset = enable ? thisCamera.armPreset : thisCamera.disarmPreset;
+  if (ptzPreset !== undefined) {
+    thisFoscamAPI.ptzGotoPresetPoint(ptzPreset);
+    self.log(thisCamera.name + " is moved to preset " + ptzPreset + ".");
   }
 
   // Get current config
